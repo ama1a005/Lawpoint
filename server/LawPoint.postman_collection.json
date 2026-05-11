@@ -1,0 +1,424 @@
+{
+  "info": {
+    "name": "LawPoint API",
+    "description": "Complete API collection for the LawPoint Court Case Management Portal.\n\nBase URL: {{baseUrl}}\n\nSetup:\n1. Set the `baseUrl` variable to `http://localhost:5000`\n2. Register and login — the `token` variable is auto-captured by the login/register requests.\n3. Run requests in the order listed (Auth → Cases → Lawyers → Hearings).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl",  "value": "http://localhost:5000", "type": "string" },
+    { "key": "token",    "value": "",                      "type": "string" },
+    { "key": "caseId",   "value": "",                      "type": "string" },
+    { "key": "lawyerId", "value": "",                      "type": "string" },
+    { "key": "requestId","value": "",                      "type": "string" },
+    { "key": "hearingId","value": "",                      "type": "string" }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/health"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Register Citizen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) { pm.collectionVariables.set('token', json.token); }",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Has token', () => pm.expect(json.token).to.be.a('string'));",
+                  "pm.test('Role is citizen', () => pm.expect(json.user.role).to.eql('citizen'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Arjun Citizen\",\n  \"email\": \"citizen@example.com\",\n  \"password\": \"Password123\",\n  \"role\": \"citizen\",\n  \"phone\": \"9876543210\",\n  \"address\": \"123 MG Road, Kochi\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Register Admin",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/register",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Admin User\",\n  \"email\": \"admin@lawpoint.in\",\n  \"password\": \"AdminPass123\",\n  \"role\": \"admin\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login Citizen",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) { pm.collectionVariables.set('token', json.token); }",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Has token', () => pm.expect(json.token).to.be.a('string'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"citizen@example.com\",\n  \"password\": \"Password123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.token) { pm.collectionVariables.set('token', json.token); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": "{{baseUrl}}/api/v1/auth/login",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@lawpoint.in\",\n  \"password\": \"AdminPass123\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Current User (me)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/auth/me"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cases",
+      "item": [
+        {
+          "name": "File Complaint (citizen)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.case && json.case.caseId) { pm.collectionVariables.set('caseId', json.case.caseId); }",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Status is pending', () => pm.expect(json.case.status).to.eql('pending'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/cases",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"complaintText\": \"The respondent has unlawfully occupied my property at Survey No. 45, Ernakulam. Despite repeated requests and legal notices, they have refused to vacate.\",\n  \"accusedPartyName\": \"Respondent Name\",\n  \"accusedPartyContact\": \"accused@example.com\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get My Cases (citizen)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/cases/my/cases"
+          }
+        },
+        {
+          "name": "Get Single Case",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/cases/{{caseId}}"
+          }
+        },
+        {
+          "name": "Get Pending Cases (admin)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/cases/pending"
+          }
+        },
+        {
+          "name": "Approve Case (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "pm.test('Status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('Case approved', () => pm.expect(json.case.status).to.eql('approved'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/cases/{{caseId}}/approve",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"courtType\": \"civil\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Reject Case (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/cases/{{caseId}}/reject",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rejectionNote\": \"Insufficient evidence provided. Please refile with supporting documents.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Close Case (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/cases/{{caseId}}/close",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcomeNote\": \"Case resolved in favour of the plaintiff. Property to be vacated within 30 days.\"\n}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Lawyers",
+      "item": [
+        {
+          "name": "Get All Available Lawyers (citizen)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/lawyers"
+          }
+        },
+        {
+          "name": "Get Lawyers by Court Type — civil",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.lawyers && json.lawyers.length > 0) { pm.collectionVariables.set('lawyerId', json.lawyers[0].lawyerId); }"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": {
+              "raw": "{{baseUrl}}/api/v1/lawyers?courtType=civil",
+              "query": [{ "key": "courtType", "value": "civil" }]
+            }
+          }
+        },
+        {
+          "name": "Send Lawyer Request (citizen)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.request && json.request.requestId) { pm.collectionVariables.set('requestId', json.request.requestId); }",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));",
+                  "pm.test('Request pending', () => pm.expect(json.request.status).to.eql('pending'));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/lawyers/request",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"caseId\": \"{{caseId}}\",\n  \"lawyerId\": \"{{lawyerId}}\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Incoming Requests (lawyer)",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/lawyers/requests/incoming"
+          }
+        },
+        {
+          "name": "Accept Request (lawyer)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/lawyers/request/{{requestId}}/accept"
+          }
+        },
+        {
+          "name": "Decline Request (lawyer)",
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/lawyers/request/{{requestId}}/decline"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Hearings",
+      "item": [
+        {
+          "name": "Schedule Hearing (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "var json = pm.response.json();",
+                  "if (json.hearing && json.hearing.hearingId) { pm.collectionVariables.set('hearingId', json.hearing.hearingId); }",
+                  "pm.test('Status 201', () => pm.response.to.have.status(201));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/hearings",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"caseId\": \"{{caseId}}\",\n  \"scheduledDate\": \"2026-06-15T10:00:00.000Z\",\n  \"notes\": \"Initial hearing. Both parties to present evidence.\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Update Hearing Outcome (admin)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Content-Type",  "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "url": "{{baseUrl}}/api/v1/hearings/{{hearingId}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"outcome\": \"Hearing completed. Case adjourned pending submission of property documents.\",\n  \"nextDate\": \"2026-07-10T10:00:00.000Z\"\n}"
+            }
+          }
+        },
+        {
+          "name": "Get Hearings for Case",
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/hearings/case/{{caseId}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "RBAC Guards (negative tests)",
+      "item": [
+        {
+          "name": "Citizen cannot access /pending (403)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Forbidden for citizen', () => pm.response.to.have.status(403));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+            "url": "{{baseUrl}}/api/v1/cases/pending"
+          }
+        },
+        {
+          "name": "No token → 401",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Unauthorised without token', () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/v1/cases/my/cases"
+          }
+        }
+      ]
+    }
+  ]
+}
