@@ -15,6 +15,11 @@ import LawyerSelect from './pages/citizen/LawyerSelect';
 // Lawyer pages
 import LawyerDashboard from './pages/lawyer/LawyerDashboard';
 
+// Admin pages
+import AdminDashboard from './pages/admin/AdminDashboard';
+import CaseReview from './pages/admin/CaseReview';
+import AdminCaseView from './pages/admin/AdminCaseView';
+
 // Misc
 import NotFound from './pages/NotFound';
 
@@ -42,6 +47,16 @@ function App() {
           <Route element={<ProtectedRoute role='lawyer' />}>
             <Route path='/lawyer/dashboard' element={<LawyerDashboard />} />
           </Route>
+
+          {/* Admin-protected routes */}
+          <Route element={<ProtectedRoute role='admin' />}>
+            <Route path='/admin/dashboard' element={<AdminDashboard />} />
+            <Route path='/admin/case/:id/review' element={<CaseReview />} />
+            <Route path='/admin/case/:id' element={<AdminCaseView />} />
+          </Route>
+
+          {/* 403 Forbidden */}
+          <Route path='/403' element={<NotFound />} />
 
           {/* 404 catch-all */}
           <Route path='*' element={<NotFound />} />
