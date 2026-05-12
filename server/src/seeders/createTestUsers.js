@@ -22,7 +22,11 @@ const createTestUsers = async () => {
     if (adminCreated) {
       await Admin.findOrCreate({
         where: { userId: adminUser.userId },
-        defaults: { userId: adminUser.userId },
+        defaults: {
+          userId: adminUser.userId,
+          employeeId: 'EMP-ADMIN-001',
+          courtType: 'criminal',
+        },
       });
       console.log('✓ Admin created  → email: admin@lawpoint.com  password: admin1234');
     } else {
