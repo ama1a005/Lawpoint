@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/index.js",
     "start": "node src/index.js",
-    "seed": "node src/seeders/lawyerSeeder.js"
+    "seed": "node src/seeders/lawyerSeeder.js",
+    "seed:users": "node src/seeders/createTestUsers.js"
   },
   "keywords": [],
   "author": "",

@@ -87,6 +87,7 @@ const Register = () => {
         password: form.password,
         phone: form.phone.trim(),
         address: form.address.trim(),
+        role: 'citizen',   // public registration is always citizen
       });
 
       if (response.data.success) {

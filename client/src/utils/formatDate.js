@@ -23,3 +23,9 @@ export const formatDate = (dateString) => {
   // toLocaleString returns "May 2, 2026, 3:30 PM" — replace the comma before time with " at"
   return formatted.replace(/,([^,]*)$/, ' at$1');
 };
+
+/**
+ * Alias for formatDate — formats a datetime string with date and time.
+ * Example: "May 2, 2026 at 3:30 PM"
+ */
+export const formatDateTime = formatDate;
