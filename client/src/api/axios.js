@@ -25,7 +25,8 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
+    // 401 = expired token, 403 = invalid/fake token — both need re-login
+    if (error.response?.status === 401 || error.response?.status === 403) {
       localStorage.removeItem('lawpoint_token');
       window.location.href = '/login';
     }
