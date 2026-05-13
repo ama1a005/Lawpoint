@@ -1,12 +1,13 @@
 const express = require('express');
 const authMiddleware = require('../middleware/auth');
 const rbac = require('../middleware/rbac');
-const { fileComplaint, getCase, getMyCases, getPendingCases, getAllCases, approveCase, rejectCase, closeCase, reviewDraft } = require('../controllers/caseController');
+const { fileComplaint, getCase, getMyCases, getPendingCases, getAllCases, approveCase, rejectCase, closeCase, reviewDraft, refineDraft } = require('../controllers/caseController');
 
 const router = express.Router();
 
 // Citizen routes
 router.post('/draft-review', authMiddleware, rbac('citizen'), reviewDraft);
+router.post('/draft-refine', authMiddleware, rbac('citizen'), refineDraft);
 router.post('/', authMiddleware, rbac('citizen'), fileComplaint);
 router.get('/my/cases', authMiddleware, rbac('citizen', 'lawyer'), getMyCases);
 

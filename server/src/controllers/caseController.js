@@ -1,5 +1,5 @@
 const { Case, AISummary, Hearing, Notification, LawyerRequest, Lawyer, User } = require('../models');
-const { scoreComplaintDraft } = require('../services/aiService');
+const { scoreComplaintDraft, refineComplaintDraft } = require('../services/aiService');
 const aiService = require('../services/aiService');
 const notificationService = require('../services/notificationService');
 
@@ -313,4 +313,23 @@ const reviewDraft = async (req, res) => {
   }
 };
 
-module.exports = { fileComplaint, getCase, getMyCases, getPendingCases, getAllCases, approveCase, rejectCase, closeCase, reviewDraft };
+// ── Refine Draft ──────────────────────────────────────────────────────────
+const refineDraft = async (req, res) => {
+  try {
+    const { complaintText } = req.body;
+
+    if (!complaintText || complaintText.trim().length < 20) {
+      return res.status(400).json({
+        success: false,
+        message: 'Complaint text must be at least 20 characters to refine.',
+      });
+    }
+
+    const result = await refineComplaintDraft(complaintText);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Could not refine complaint draft', error: err.message });
+  }
+};
+
+module.exports = { fileComplaint, getCase, getMyCases, getPendingCases, getAllCases, approveCase, rejectCase, closeCase, reviewDraft, refineDraft };

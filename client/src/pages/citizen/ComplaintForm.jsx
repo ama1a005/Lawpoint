@@ -19,6 +19,13 @@ const ComplaintForm = () => {
   const [reviewing, setReviewing] = useState(false);
   const [reviewError, setReviewError] = useState('');
 
+  // AI Refine + version history state
+  const [refining, setRefining] = useState(false);
+  const [refineError, setRefineError] = useState('');
+  const [refineSummary, setRefineSummary] = useState('');
+  const [draftHistory, setDraftHistory] = useState([]); // stack of previous description versions
+  const [historyIndex, setHistoryIndex] = useState(-1); // current position in history (-1 = latest)
+
   const navigate = useNavigate();
 
   const validate = () => {
@@ -193,35 +200,111 @@ const ComplaintForm = () => {
                   <p className='text-caption text-red-600 mt-1'>{errors.description}</p>
                 )}
 
-                {/* Check My Complaint button */}
-                <button
-                  type='button'
-                  onClick={async () => {
-                    if (!description || description.trim().length < 20) return;
-                    setReviewing(true);
-                    setReview(null);
-                    setReviewError('');
-                    try {
-                      const res = await api.post('/api/v1/cases/draft-review', { complaintText: description.trim() });
-                      setReview(res.data.review);
-                    } catch {
-                      setReviewError('Could not analyse your complaint. You can still submit.');
-                    } finally {
-                      setReviewing(false);
-                    }
-                  }}
-                  disabled={reviewing || description.trim().length < 50}
-                  className='mt-1 px-4 py-2 bg-sky/30 text-steel border border-sky rounded-md text-caption font-semibold hover:bg-sky/50 disabled:opacity-40 transition-all'
-                >
-                  {reviewing ? (
-                    <span className='flex items-center gap-2'>
-                      <span className='w-3 h-3 border-2 border-steel border-t-transparent rounded-full animate-spin inline-block' />
-                      Analysing...
-                    </span>
-                  ) : (
-                    '🔍 Check My Complaint'
+                {/* AI action buttons row */}
+                <div className='flex gap-2 mt-1'>
+                  {/* Check My Complaint button */}
+                  <button
+                    type='button'
+                    onClick={async () => {
+                      if (!description || description.trim().length < 20) return;
+                      setReviewing(true);
+                      setReview(null);
+                      setReviewError('');
+                      try {
+                        const res = await api.post('/api/v1/cases/draft-review', { complaintText: description.trim() });
+                        setReview(res.data.review);
+                      } catch {
+                        setReviewError('Could not analyse your complaint. You can still submit.');
+                      } finally {
+                        setReviewing(false);
+                      }
+                    }}
+                    disabled={reviewing || refining || description.trim().length < 50}
+                    className='px-4 py-2 bg-sky/30 text-steel border border-sky rounded-md text-caption font-semibold hover:bg-sky/50 disabled:opacity-40 transition-all'
+                  >
+                    {reviewing ? (
+                      <span className='flex items-center gap-2'>
+                        <span className='w-3 h-3 border-2 border-steel border-t-transparent rounded-full animate-spin inline-block' />
+                        Analysing...
+                      </span>
+                    ) : (
+                      '🔍 Check My Complaint'
+                    )}
+                  </button>
+
+                  {/* AI Refine button */}
+                  <button
+                    type='button'
+                    onClick={async () => {
+                      if (!description || description.trim().length < 20) return;
+                      setRefining(true);
+                      setRefineError('');
+                      setRefineSummary('');
+                      try {
+                        // Save current version to history before refining
+                        setDraftHistory(prev => [...prev, description]);
+                        setHistoryIndex(-1);
+
+                        const res = await api.post('/api/v1/cases/draft-refine', { complaintText: description.trim() });
+                        if (res.data.success && res.data.refinedText) {
+                          setDescription(res.data.refinedText);
+                          setRefineSummary(res.data.changesSummary || 'Text refined by AI.');
+                          // Clear review since text changed
+                          setReview(null);
+                        }
+                      } catch {
+                        setRefineError('Could not refine your complaint. Try again.');
+                        // Remove the saved version since refine failed
+                        setDraftHistory(prev => prev.slice(0, -1));
+                      } finally {
+                        setRefining(false);
+                      }
+                    }}
+                    disabled={refining || reviewing || description.trim().length < 50}
+                    className='px-4 py-2 bg-navy/10 text-navy border border-navy/20 rounded-md text-caption font-semibold hover:bg-navy/20 disabled:opacity-40 transition-all'
+                  >
+                    {refining ? (
+                      <span className='flex items-center gap-2'>
+                        <span className='w-3 h-3 border-2 border-navy border-t-transparent rounded-full animate-spin inline-block' />
+                        Refining...
+                      </span>
+                    ) : (
+                      '✨ AI Refine'
+                    )}
+                  </button>
+
+                  {/* Undo button */}
+                  {draftHistory.length > 0 && (
+                    <button
+                      type='button'
+                      onClick={() => {
+                        // Save current text to allow redo-like navigation
+                        const lastVersion = draftHistory[draftHistory.length - 1];
+                        setDraftHistory(prev => prev.slice(0, -1));
+                        // Push current to a forward slot by saving it
+                        setDescription(lastVersion);
+                        setRefineSummary('');
+                        setReview(null);
+                      }}
+                      className='px-4 py-2 border border-slate/30 text-slate rounded-md text-caption font-semibold hover:bg-slate/10 transition-all'
+                    >
+                      ↩ Undo ({draftHistory.length})
+                    </button>
                   )}
-                </button>
+                </div>
+
+                {/* Refine feedback */}
+                {refineError && <p className='text-caption text-red-500 mt-1'>{refineError}</p>}
+                {refineSummary && (
+                  <div className='mt-2 flex items-start gap-2 bg-green-50 border border-green-200 rounded-md px-3 py-2'>
+                    <span className='text-green-700 text-caption'>✨</span>
+                    <div className='flex-1'>
+                      <p className='text-caption text-green-800 font-semibold'>AI Refined</p>
+                      <p className='text-caption text-green-700'>{refineSummary}</p>
+                    </div>
+                    <button type='button' onClick={() => setRefineSummary('')} className='text-caption text-green-600 hover:text-green-800'>×</button>
+                  </div>
+                )}
                 {reviewError && <p className='text-caption text-red-500 mt-1'>{reviewError}</p>}
 
                 {/* Draft Review Feedback Panel */}

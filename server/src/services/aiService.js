@@ -284,5 +284,58 @@ Return ONLY the JSON object. No extra text, no markdown.
   }
 };
 
-module.exports = { assessComplaint, scoreLawyersForCase, scoreComplaintDraft };
+/**
+ * Refine/rewrite a complaint draft to improve its quality.
+ * Preserves all original facts but improves clarity, structure, and legal relevance.
+ * @param {string} draftText - Current complaint draft
+ * @returns {{ refinedText: string, changesSummary: string }}
+ */
+const refineComplaintDraft = async (draftText) => {
+  const sanitised = sanitiseText(draftText);
+
+  const prompt = `
+You are a legal writing assistant for a court complaint filing system.
+
+A citizen has written the following complaint draft:
+"${sanitised}"
+
+Rewrite this complaint to make it stronger and more effective for court review. Follow these rules:
+
+1. PRESERVE every fact, date, name, location, and detail from the original — do NOT invent or assume new facts
+2. Improve clarity and structure — use clear paragraphs
+3. Add formal legal tone while keeping it readable
+4. Highlight key evidence and damages mentioned
+5. Make the timeline of events clearer if dates are mentioned
+6. Keep the length reasonable — don't make it excessively longer than the original
+7. Write in first person as the citizen
+
+Respond ONLY with a JSON object:
+{
+  "refinedText": "the improved complaint text",
+  "changesSummary": "one sentence describing what you changed"
+}
+
+No extra text outside the JSON.
+  `.trim();
+
+  try {
+    const raw = await callAI(prompt);
+    const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    if (!parsed.refinedText || !parsed.changesSummary) {
+      throw new Error('Missing fields in refine response');
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error('[aiService] Draft refine failed:', err.message);
+    return {
+      refinedText: draftText,
+      changesSummary: 'AI refinement unavailable — original text preserved.',
+    };
+  }
+};
+
+module.exports = { assessComplaint, scoreLawyersForCase, scoreComplaintDraft, refineComplaintDraft };
 
