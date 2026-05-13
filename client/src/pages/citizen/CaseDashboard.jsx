@@ -170,6 +170,8 @@ const CaseDashboard = () => {
                   <dd className='mt-0.5'>
                     {caseData.courtType ? (
                       <Badge status={caseData.courtType} />
+                    ) : caseData.status === 'rejected' ? (
+                      <span className='text-body text-slate italic'>N/A</span>
                     ) : (
                       <span className='text-body text-slate italic'>Pending assignment</span>
                     )}
@@ -304,9 +306,15 @@ const CaseDashboard = () => {
                 {userRole === 'citizen' && caseData.status === 'rejected' && (
                   <div className='bg-red-50 border border-red-200 rounded-md p-4'>
                     <p className='text-body font-semibold text-red-700'>Case Rejected</p>
-                    <p className='text-caption text-slate mt-1'>
-                      This complaint was rejected during review. You may file a new complaint.
-                    </p>
+                    {caseData.rejectionNote ? (
+                      <p className='text-caption text-slate mt-1'>
+                        <span className='font-semibold'>Reason:</span> {caseData.rejectionNote}
+                      </p>
+                    ) : (
+                      <p className='text-caption text-slate mt-1'>
+                        This complaint was rejected during review. You may file a new complaint.
+                      </p>
+                    )}
                     <button
                       type='button'
                       onClick={() => navigate('/case/new')}

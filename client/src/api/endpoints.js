@@ -20,8 +20,8 @@ export const getAllCases = (status) =>
 export const getLawyers = (courtType) =>
   api.get('/api/v1/lawyers', { params: courtType ? { courtType } : {} });
 export const sendLawyerRequest = (data) => api.post('/api/v1/lawyers/request', data);
-export const acceptRequest = (id) => api.patch(`/api/v1/lawyers/request/${id}/accept`);
-export const declineRequest = (id) => api.patch(`/api/v1/lawyers/request/${id}/decline`);
+export const acceptRequest = (id) => api.patch(`/api/v1/lawyers/requests/${id}/accept`);
+export const declineRequest = (id) => api.patch(`/api/v1/lawyers/requests/${id}/decline`);
 export const getIncomingRequests = () => api.get('/api/v1/lawyers/requests/incoming');
 
 // ── Hearings ──────────────────────────────────────────────────────────

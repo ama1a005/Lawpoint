@@ -17,6 +17,8 @@ const createHearing = async (req, res) => {
 
     const caseData = await Case.findByPk(caseId);
     if (!caseData) return res.status(404).json({ success: false, message: 'Case not found' });
+    if (caseData.status !== 'active') return res.status(400).json({ success: false, message: 'Hearings can only be scheduled for active cases.' });
+    if (!caseData.lawyerId) return res.status(400).json({ success: false, message: 'A lawyer must be assigned before scheduling hearings.' });
 
     const hearing = await Hearing.create({ caseId, scheduledDate, notes });
 

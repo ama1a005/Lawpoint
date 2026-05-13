@@ -105,7 +105,7 @@ export default function AdminDashboard() {
                   {/* Court type badge from AI */}
                   {c.aiSummary?.recommendedCourt && (
                     <div className="flex items-center gap-2 mb-3">
-                      <span className="text-caption text-slate">AI recommends:</span>
+                      <span className="text-caption text-slate">Recommended court:</span>
                       <Badge status={c.aiSummary.recommendedCourt} />
                     </div>
                   )}
@@ -113,7 +113,7 @@ export default function AdminDashboard() {
                   {/* Relevance dots */}
                   {c.aiSummary?.relevanceScore != null && (
                     <div className="flex items-center gap-2 mb-4">
-                      <span className="text-body text-slate">AI Relevance:</span>
+                      <span className="text-body text-slate">Relevance:</span>
                       <RelevanceDots score={Math.round(c.aiSummary.relevanceScore * 5)} />
                     </div>
                   )}

@@ -33,11 +33,20 @@ const createTestUsers = async () => {
       console.log('✓ Admin already exists');
     }
 
-    // ── 2. Create one Lawyer user per court type ──────────────────────────
+    // ── 2. Create Lawyer user accounts ──────────────────────────────────
     const lawyerAccounts = [
-      { email: 'rajesh@lawpoint.com', name: 'Rajesh Kumar', password: 'lawyer1234', barId: 'CRI001' },
-      { email: 'neha@lawpoint.com',   name: 'Neha Gupta',   password: 'lawyer1234', barId: 'CIV001' },
-      { email: 'sanjay@lawpoint.com', name: 'Sanjay Reddy', password: 'lawyer1234', barId: 'FAM001' },
+      // Criminal court
+      { email: 'rajesh@lawpoint.com', name: 'Rajesh Kumar',   password: 'lawyer1234', barId: 'CRI001' },
+      { email: 'priya@lawpoint.com',  name: 'Priya Sharma',   password: 'lawyer1234', barId: 'CRI002' },
+      { email: 'amit@lawpoint.com',   name: 'Amit Verma',     password: 'lawyer1234', barId: 'CRI003' },
+      // Civil court
+      { email: 'neha@lawpoint.com',   name: 'Neha Gupta',     password: 'lawyer1234', barId: 'CIV001' },
+      { email: 'arjun@lawpoint.com',  name: 'Arjun Singh',    password: 'lawyer1234', barId: 'CIV002' },
+      { email: 'deepika@lawpoint.com', name: 'Deepika Patel', password: 'lawyer1234', barId: 'CIV003' },
+      // Family court
+      { email: 'sanjay@lawpoint.com', name: 'Sanjay Reddy',   password: 'lawyer1234', barId: 'FAM001' },
+      { email: 'anjali@lawpoint.com', name: 'Anjali Desai',   password: 'lawyer1234', barId: 'FAM002' },
+      { email: 'vikram@lawpoint.com', name: 'Vikram Nair',    password: 'lawyer1234', barId: 'FAM003' },
     ];
 
     for (const acc of lawyerAccounts) {

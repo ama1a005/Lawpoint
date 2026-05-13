@@ -12,8 +12,8 @@ router.get('/', authMiddleware, getLawyers);
 router.post('/request', authMiddleware, rbac('citizen'), sendRequest);
 
 // Accept/Decline request (lawyer)
-router.patch('/request/:id/accept', authMiddleware, rbac('lawyer'), acceptRequest);
-router.patch('/request/:id/decline', authMiddleware, rbac('lawyer'), declineRequest);
+router.patch('/requests/:id/accept', authMiddleware, rbac('lawyer'), acceptRequest);
+router.patch('/requests/:id/decline', authMiddleware, rbac('lawyer'), declineRequest);
 
 // Get incoming requests (lawyer)
 router.get('/requests/incoming', authMiddleware, rbac('lawyer'), getIncomingRequests);
