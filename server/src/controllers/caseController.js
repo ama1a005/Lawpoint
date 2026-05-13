@@ -13,17 +13,17 @@ const createAndSend = async (caseId, recipientContact, channel, message, sendFn)
 // ── File Complaint ─────────────────────────────────────────────────────────
 const fileComplaint = async (req, res) => {
   try {
-    const { complaintText, accusedPartyName, accusedPartyContact } = req.body;
+    const { title, complaintText, accusedContact } = req.body;
 
-    if (!complaintText || !accusedPartyName || !accusedPartyContact) {
-      return res.status(400).json({ success: false, message: 'complaintText, accusedPartyName, and accusedPartyContact are required.' });
+    if (!title || !complaintText || !accusedContact) {
+      return res.status(400).json({ success: false, message: 'title, complaintText, and accusedContact are required.' });
     }
 
     const newCase = await Case.create({
       citizenId: req.user.userId,
+      title,
       complaintText,
-      accusedPartyName,
-      accusedPartyContact,
+      accusedPartyContact: accusedContact,
       status: 'pending',
     });
 
@@ -62,21 +62,54 @@ const getCase = async (req, res) => {
 
     if (!caseData) return res.status(404).json({ success: false, message: 'Case not found' });
 
-    res.json({ success: true, case: caseData });
+    // Normalize keys for the frontend (Sequelize uses model names by default)
+    const plain = caseData.toJSON();
+    plain.aiSummary = plain.AISummary || null;
+    plain.hearings = plain.Hearings || [];
+    plain.notifications = plain.Notifications || [];
+    plain.lawyerRequests = plain.LawyerRequests || [];
+    delete plain.AISummary;
+    delete plain.Hearings;
+    delete plain.Notifications;
+    delete plain.LawyerRequests;
+
+    res.json({ success: true, case: plain });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch case', error: err.message });
   }
 };
 
-// ── Get My Cases (citizen) ─────────────────────────────────────────────────
+// ── Get My Cases (citizen or lawyer) ──────────────────────────────────────
 const getMyCases = async (req, res) => {
   try {
+    // Citizens see cases they filed; lawyers see cases assigned to them
+    const where = req.user.role === 'lawyer'
+      ? { lawyerId: req.user.userId }
+      : { citizenId: req.user.userId };
+
+    // For lawyers, try matching by Lawyer record's lawyerId rather than userId
+    if (req.user.role === 'lawyer') {
+      const lawyer = await Lawyer.findOne({ where: { userId: req.user.userId } });
+      if (lawyer) {
+        where.lawyerId = lawyer.lawyerId;
+      }
+    }
+
     const cases = await Case.findAll({
-      where: { citizenId: req.user.userId },
+      where,
       include: [{ model: AISummary }],
       order: [['filedAt', 'DESC']],
     });
-    res.json({ success: true, cases });
+
+    // Normalize keys for the frontend
+    const normalizedCases = cases.map((c) => {
+      const plain = c.toJSON();
+      plain.aiSummary = plain.AISummary || null;
+      delete plain.AISummary;
+      return plain;
+    });
+
+    res.json({ success: true, cases: normalizedCases });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch cases', error: err.message });
   }
@@ -90,9 +123,43 @@ const getPendingCases = async (req, res) => {
       include: [{ model: AISummary }],
       order: [['filedAt', 'ASC']],
     });
-    res.json({ success: true, cases });
+
+    // Normalize keys for the frontend
+    const normalizedCases = cases.map((c) => {
+      const plain = c.toJSON();
+      plain.aiSummary = plain.AISummary || null;
+      delete plain.AISummary;
+      return plain;
+    });
+
+    res.json({ success: true, cases: normalizedCases });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch pending cases', error: err.message });
+  }
+};
+
+// ── Get All Cases (admin) ──────────────────────────────────────────────────
+const getAllCases = async (req, res) => {
+  try {
+    const where = {};
+    if (req.query.status) where.status = req.query.status;
+
+    const cases = await Case.findAll({
+      where,
+      include: [{ model: AISummary }],
+      order: [['filedAt', 'DESC']],
+    });
+
+    const normalizedCases = cases.map((c) => {
+      const plain = c.toJSON();
+      plain.aiSummary = plain.AISummary || null;
+      delete plain.AISummary;
+      return plain;
+    });
+
+    res.json({ success: true, cases: normalizedCases });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to fetch cases', error: err.message });
   }
 };
 
@@ -117,14 +184,28 @@ const approveCase = async (req, res) => {
     await caseData.update({ status: 'approved', courtType: finalCourtType });
 
     // Phase 4 — Notify accused party (only case ref, never complaint text)
+    const contact = caseData.accusedPartyContact;
+    const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact);
     const message = `You have been named in a legal case. Reference: ${caseData.caseId}. Contact your nearest court for details.`;
-    await createAndSend(
-      caseData.caseId,
-      caseData.accusedPartyContact,
-      'email',
-      message,
-      () => notificationService.notifyAccused(caseData.accusedPartyContact, caseData.caseId),
-    );
+
+    if (isEmail) {
+      await createAndSend(
+        caseData.caseId,
+        contact,
+        'email',
+        message,
+        () => notificationService.notifyAccused(contact, caseData.caseId),
+      );
+    } else {
+      // Phone number or other contact — log notification as SMS/manual
+      await createAndSend(
+        caseData.caseId,
+        contact,
+        'sms',
+        message,
+        () => notificationService.sendSMS(contact, message),
+      );
+    }
 
     res.json({ success: true, message: 'Case approved and accused notified.', case: caseData });
   } catch (err) {
@@ -181,4 +262,4 @@ const closeCase = async (req, res) => {
   }
 };
 
-module.exports = { fileComplaint, getCase, getMyCases, getPendingCases, approveCase, rejectCase, closeCase };
+module.exports = { fileComplaint, getCase, getMyCases, getPendingCases, getAllCases, approveCase, rejectCase, closeCase };

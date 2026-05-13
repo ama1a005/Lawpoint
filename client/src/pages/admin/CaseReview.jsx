@@ -8,6 +8,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import Toast from '../../components/Toast';
 import { getCaseById, approveCase, rejectCase } from '../../api/endpoints';
 import { formatDate } from '../../utils/formatDate';
+import { USE_MOCK, MOCK_CASES } from '../../utils/mockData';
 
 const COURT_OPTIONS = ['criminal', 'civil', 'family'];
 
@@ -27,20 +28,36 @@ export default function CaseReview() {
   const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    getCaseById(id)
-      .then((res) => {
-        const c = res.data.case;
-        setCaseData(c);
-        setCourtType(c.aiSummary?.recommendedCourt || 'criminal');
-      })
-      .catch(() => setToast({ message: 'Failed to load case.', type: 'error' }))
-      .finally(() => setLoading(false));
+    const fetchCase = async () => {
+      try {
+        if (USE_MOCK) {
+          await new Promise((r) => setTimeout(r, 400));
+          const found = MOCK_CASES.find((c) => c.caseId === id) || MOCK_CASES.find((c) => c.status === 'pending') || MOCK_CASES[0];
+          setCaseData(found);
+          setCourtType(found.aiSummary?.recommendedCourt || 'criminal');
+        } else {
+          const res = await getCaseById(id);
+          const c = res.data.case;
+          setCaseData(c);
+          setCourtType(c.aiSummary?.recommendedCourt || 'criminal');
+        }
+      } catch {
+        setToast({ message: 'Failed to load case.', type: 'error' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCase();
   }, [id]);
 
   const handleApprove = async () => {
     setActionLoading(true);
     try {
-      await approveCase(id, { courtType });
+      if (USE_MOCK) {
+        await new Promise((r) => setTimeout(r, 600));
+      } else {
+        await approveCase(id, { courtType });
+      }
       setToast({ message: 'Case approved successfully.', type: 'success' });
       setTimeout(() => navigate('/admin/dashboard'), 1200);
     } catch {
@@ -54,7 +71,11 @@ export default function CaseReview() {
     if (!rejectionNote.trim()) return;
     setActionLoading(true);
     try {
-      await rejectCase(id, { rejectionNote });
+      if (USE_MOCK) {
+        await new Promise((r) => setTimeout(r, 600));
+      } else {
+        await rejectCase(id, { rejectionNote });
+      }
       setShowRejectModal(false);
       setToast({ message: 'Case rejected.', type: 'success' });
       setTimeout(() => navigate('/admin/dashboard'), 1200);
@@ -195,6 +216,7 @@ export default function CaseReview() {
       {/* Reject Modal */}
       {showRejectModal && (
         <Modal
+          isOpen={true}
           title="Reject Case"
           message="Provide a reason for rejection. This will be sent to the citizen."
           confirmLabel="Confirm Rejection"
@@ -216,7 +238,7 @@ export default function CaseReview() {
       )}
 
       {toast && (
-        <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );

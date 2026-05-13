@@ -179,7 +179,16 @@ const LawyerSelect = () => {
 
                   {/* Middle: details */}
                   <p className='text-body text-slate'>Bar ID: {lawyer.barId}</p>
-                  <p className='text-body text-slate mb-4'>{lawyer.specialisation}</p>
+                  <p className='text-body text-slate mb-3'>{lawyer.specialisation}</p>
+
+                  {/* Login credentials hint (for demo) */}
+                  {lawyer.user && lawyer.user.email && (
+                    <div className='bg-sky/20 rounded-md px-3 py-2 mb-3'>
+                      <p className='text-caption text-slate'>
+                        <span className='font-semibold'>Demo login:</span> {lawyer.user.email} / lawyer1234
+                      </p>
+                    </div>
+                  )}
 
                   {/* Bottom: action button */}
                   {lawyer.isAvailable ? (

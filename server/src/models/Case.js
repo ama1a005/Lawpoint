@@ -11,6 +11,10 @@ const Case = sequelize.define('Case', {
     type: DataTypes.UUID,
     allowNull: false,
   },
+  title: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
   courtType: {
     type: DataTypes.ENUM('criminal', 'civil', 'family'),
     allowNull: true, // Set after AI assessment
@@ -25,7 +29,7 @@ const Case = sequelize.define('Case', {
   },
   accusedPartyName: {
     type: DataTypes.STRING,
-    allowNull: false,
+    allowNull: true,
   },
   accusedPartyContact: {
     type: DataTypes.STRING,

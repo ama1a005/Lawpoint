@@ -12,6 +12,7 @@ const navLinks = {
   citizen: [
     { label: 'Dashboard', path: '/dashboard', icon: 'grid' },
     { label: 'File Complaint', path: '/case/new', icon: 'plus' },
+    { label: 'My Account', path: '/profile', icon: 'user' },
   ],
   lawyer: [
     { label: 'My Dashboard', path: '/lawyer/dashboard', icon: 'briefcase' },
@@ -41,6 +42,11 @@ const icons = {
   clipboard: (
     <svg className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={1.5}>
       <path strokeLinecap='round' strokeLinejoin='round' d='M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' />
+    </svg>
+  ),
+  user: (
+    <svg className='w-5 h-5' fill='none' viewBox='0 0 24 24' stroke='currentColor' strokeWidth={1.5}>
+      <path strokeLinecap='round' strokeLinejoin='round' d='M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z' />
     </svg>
   ),
   logout: (

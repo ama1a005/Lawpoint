@@ -6,6 +6,7 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import Toast from '../../components/Toast';
 import { getPendingCases } from '../../api/endpoints';
 import { formatDate } from '../../utils/formatDate';
+import { USE_MOCK, MOCK_CASES } from '../../utils/mockData';
 
 function RelevanceDots({ score }) {
   return (
@@ -42,10 +43,23 @@ export default function AdminDashboard() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    getPendingCases()
-      .then((res) => setCases(res.data.cases || []))
-      .catch(() => setToast({ message: 'Failed to load pending cases.', type: 'error' }))
-      .finally(() => setLoading(false));
+    const fetchData = async () => {
+      try {
+        if (USE_MOCK) {
+          await new Promise((r) => setTimeout(r, 400));
+          const pending = MOCK_CASES.filter((c) => c.status === 'pending');
+          setCases(pending);
+        } else {
+          const res = await getPendingCases();
+          setCases(res.data.cases || []);
+        }
+      } catch {
+        setToast({ message: 'Failed to load pending cases.', type: 'error' });
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
   }, []);
 
   return (
@@ -100,7 +114,7 @@ export default function AdminDashboard() {
                   {c.aiSummary?.relevanceScore != null && (
                     <div className="flex items-center gap-2 mb-4">
                       <span className="text-body text-slate">AI Relevance:</span>
-                      <RelevanceDots score={c.aiSummary.relevanceScore} />
+                      <RelevanceDots score={Math.round(c.aiSummary.relevanceScore * 5)} />
                     </div>
                   )}
 
@@ -124,7 +138,7 @@ export default function AdminDashboard() {
       </main>
 
       {toast && (
-        <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );

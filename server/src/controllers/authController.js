@@ -80,17 +80,62 @@ const login = async (req, res) => {
   }
 };
 
-// Get current user
+// Get current user (extended with citizen profile)
 const getMe = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.userId);
-    res.json({
-      success: true,
-      user: { userId: user.userId, name: user.name, email: user.email, role: user.role },
-    });
+    const result = { userId: user.userId, name: user.name, email: user.email, role: user.role };
+
+    // Include citizen profile data if applicable
+    if (user.role === 'citizen') {
+      const citizen = await Citizen.findOne({ where: { userId: user.userId } });
+      if (citizen) {
+        result.phone = citizen.phone;
+        result.address = citizen.address;
+      }
+    }
+
+    res.json({ success: true, user: result });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch user', error: err.message });
   }
 };
 
-module.exports = { register, login, getMe };
+// Update citizen profile
+const updateProfile = async (req, res) => {
+  try {
+    const { name, phone, address } = req.body;
+    const user = await User.findByPk(req.user.userId);
+
+    if (name && name.trim()) {
+      await user.update({ name: name.trim() });
+    }
+
+    if (user.role === 'citizen') {
+      const citizen = await Citizen.findOne({ where: { userId: user.userId } });
+      if (citizen) {
+        const updates = {};
+        if (phone !== undefined) updates.phone = phone.trim();
+        if (address !== undefined) updates.address = address.trim();
+        if (Object.keys(updates).length > 0) await citizen.update(updates);
+      }
+    }
+
+    // Return updated data
+    const updatedUser = await User.findByPk(req.user.userId);
+    const result = { userId: updatedUser.userId, name: updatedUser.name, email: updatedUser.email, role: updatedUser.role };
+    if (updatedUser.role === 'citizen') {
+      const citizen = await Citizen.findOne({ where: { userId: updatedUser.userId } });
+      if (citizen) {
+        result.phone = citizen.phone;
+        result.address = citizen.address;
+      }
+    }
+
+    res.json({ success: true, message: 'Profile updated successfully.', user: result });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Failed to update profile', error: err.message });
+  }
+};
+
+module.exports = { register, login, getMe, updateProfile };

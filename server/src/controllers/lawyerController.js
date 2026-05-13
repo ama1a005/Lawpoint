@@ -1,4 +1,4 @@
-const { Lawyer, LawyerRequest, Case, Notification, User } = require('../models');
+const { Lawyer, LawyerRequest, Case, AISummary, Notification, User } = require('../models');
 const notificationService = require('../services/notificationService');
 
 // ── Helper ─────────────────────────────────────────────────────────────────
@@ -13,15 +13,24 @@ const createAndSend = async (caseId, recipientContact, channel, message, sendFn)
 const getLawyers = async (req, res) => {
   try {
     const { courtType } = req.query;
-    const where = { isAvailable: true };
+    const where = {};
     if (courtType) where.courtType = courtType;
 
     const lawyers = await Lawyer.findAll({
       where,
       attributes: ['lawyerId', 'name', 'barId', 'specialisation', 'courtType', 'isAvailable'],
+      include: [{ model: User, attributes: ['email'] }],
     });
 
-    res.json({ success: true, lawyers });
+    // Normalize: Sequelize returns 'User', frontend expects 'user'
+    const normalized = lawyers.map((l) => {
+      const plain = l.toJSON();
+      plain.user = plain.User || null;
+      delete plain.User;
+      return plain;
+    });
+
+    res.json({ success: true, lawyers: normalized });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch lawyers', error: err.message });
   }
@@ -117,11 +126,32 @@ const getIncomingRequests = async (req, res) => {
 
     const requests = await LawyerRequest.findAll({
       where: { lawyerId: lawyer.lawyerId },
-      include: [{ model: Case }],
+      include: [{
+        model: Case,
+        include: [{ model: AISummary }],
+      }],
       order: [['requestedAt', 'DESC']],
     });
 
-    res.json({ success: true, requests });
+    // Normalize: attach citizenName and flatten aiSummary inside case
+    const normalized = await Promise.all(requests.map(async (r) => {
+      const plain = r.toJSON();
+
+      // Flatten Case keys
+      if (plain.Case) {
+        plain.Case.aiSummary = plain.Case.AISummary || null;
+        delete plain.Case.AISummary;
+
+        // Fetch citizen name
+        const citizen = await User.findByPk(plain.Case.citizenId, { attributes: ['name', 'email'] });
+        plain.citizenName = citizen?.name || 'Unknown';
+        plain.citizenEmail = citizen?.email || '';
+      }
+
+      return plain;
+    }));
+
+    res.json({ success: true, requests: normalized });
   } catch (err) {
     res.status(500).json({ success: false, message: 'Failed to fetch requests', error: err.message });
   }

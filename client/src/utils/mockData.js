@@ -4,7 +4,7 @@
  * Set USE_MOCK = true to bypass API calls and render with fake data.
  * Flip to false when the backend is running.
  */
-export const USE_MOCK = true;
+export const USE_MOCK = false;
 
 /* ─── Helper: fake JWT token that AuthContext can decode ─── */
 const fakePayload = (role) => {

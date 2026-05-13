@@ -10,6 +10,7 @@ import Toast from '../../components/Toast';
 import HearingForm from './HearingForm';
 import { getCaseById, closeCase, getHearingsByCase } from '../../api/endpoints';
 import { formatDate, formatDateTime } from '../../utils/formatDate';
+import { USE_MOCK, MOCK_CASES } from '../../utils/mockData';
 
 export default function AdminCaseView() {
   const { id } = useParams();
@@ -28,12 +29,24 @@ export default function AdminCaseView() {
   const [showHearingForm, setShowHearingForm] = useState(false);
   const [editingHearing, setEditingHearing] = useState(null); // null = create mode
 
-  const fetchCase = useCallback(() => {
-    return getCaseById(id).then((res) => setCaseData(res.data.case));
+  const fetchCase = useCallback(async () => {
+    if (USE_MOCK) {
+      const found = MOCK_CASES.find((c) => c.caseId === id) || MOCK_CASES[0];
+      setCaseData(found);
+      return;
+    }
+    const res = await getCaseById(id);
+    setCaseData(res.data.case);
   }, [id]);
 
-  const fetchHearings = useCallback(() => {
-    return getHearingsByCase(id).then((res) => setHearings(res.data.hearings || []));
+  const fetchHearings = useCallback(async () => {
+    if (USE_MOCK) {
+      const found = MOCK_CASES.find((c) => c.caseId === id) || MOCK_CASES[0];
+      setHearings(found.hearings || []);
+      return;
+    }
+    const res = await getHearingsByCase(id);
+    setHearings(res.data.hearings || []);
   }, [id]);
 
   useEffect(() => {
@@ -46,10 +59,15 @@ export default function AdminCaseView() {
     if (!outcomeNote.trim()) return;
     setCloseLoading(true);
     try {
-      await closeCase(id, { outcomeNote });
+      if (USE_MOCK) {
+        await new Promise((r) => setTimeout(r, 600));
+        setCaseData((prev) => ({ ...prev, status: 'closed', outcome: outcomeNote, closedAt: new Date().toISOString() }));
+      } else {
+        await closeCase(id, { outcomeNote });
+        await fetchCase();
+      }
       setShowCloseModal(false);
       setToast({ message: 'Case closed successfully.', type: 'success' });
-      await fetchCase();
     } catch {
       setToast({ message: 'Failed to close case.', type: 'error' });
     } finally {
@@ -178,25 +196,27 @@ export default function AdminCaseView() {
               </div>
             )}
 
-            {/* 4. Hearing Timeline */}
-            <div className="bg-white rounded-lg border border-sky shadow-sm p-6">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-h3 font-semibold text-navy">Hearing Timeline</h2>
-                {caseData.status !== 'closed' && (
-                  <button
-                    onClick={openCreateHearing}
-                    className="bg-steel text-white text-body font-semibold px-4 py-2 rounded-md shadow-sm hover:bg-navy-mid active:scale-95 transition-all text-sm"
-                  >
-                    + Schedule Hearing
-                  </button>
-                )}
+            {/* 4. Hearing Timeline — only for active/closed cases */}
+            {['active', 'closed'].includes(caseData.status) && (
+              <div className="bg-white rounded-lg border border-sky shadow-sm p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-h3 font-semibold text-navy">Hearing Timeline</h2>
+                  {caseData.status === 'active' && caseData.lawyerId && (
+                    <button
+                      onClick={openCreateHearing}
+                      className="bg-steel text-white text-body font-semibold px-4 py-2 rounded-md shadow-sm hover:bg-navy-mid active:scale-95 transition-all text-sm"
+                    >
+                      + Schedule Hearing
+                    </button>
+                  )}
+                </div>
+                <HearingTimeline
+                  hearings={hearings}
+                  showUpdateButton={caseData.status === 'active'}
+                  onUpdate={openUpdateHearing}
+                />
               </div>
-              <HearingTimeline
-                hearings={hearings}
-                showUpdateButton={caseData.status !== 'closed'}
-                onUpdate={openUpdateHearing}
-              />
-            </div>
+            )}
           </div>
 
           {/* ── Right column ── */}
@@ -218,19 +238,33 @@ export default function AdminCaseView() {
                 )}
               </div>
 
-              {/* Assigned Lawyer */}
-              <div className="pt-4 border-t border-sky/50">
-                <p className="text-caption text-slate mb-2">Assigned Lawyer</p>
-                {assignedLawyer ? (
-                  <div>
-                    <p className="text-h3 font-semibold text-navy">{assignedLawyer.name}</p>
-                    <p className="text-body text-slate">{assignedLawyer.barId}</p>
-                    <p className="text-body text-slate">{assignedLawyer.specialisation}</p>
+              {/* Assigned Lawyer — hide for rejected */}
+              {caseData.status !== 'rejected' && (
+                <div className="pt-4 border-t border-sky/50">
+                  <p className="text-caption text-slate mb-2">Assigned Lawyer</p>
+                  {assignedLawyer ? (
+                    <div>
+                      <p className="text-h3 font-semibold text-navy">{assignedLawyer.name}</p>
+                      <p className="text-body text-slate">{assignedLawyer.barId}</p>
+                      <p className="text-body text-slate">{assignedLawyer.specialisation}</p>
+                    </div>
+                  ) : (
+                    <p className="text-body text-slate italic">Awaiting lawyer assignment</p>
+                  )}
+                </div>
+              )}
+
+              {/* Rejection info */}
+              {caseData.status === 'rejected' && (
+                <div className="pt-4 border-t border-sky/50">
+                  <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                    <p className="text-body font-semibold text-red-700">Case Rejected</p>
+                    {caseData.rejectionNote && (
+                      <p className="text-caption text-slate mt-1">{caseData.rejectionNote}</p>
+                    )}
                   </div>
-                ) : (
-                  <p className="text-body text-slate italic">Awaiting lawyer assignment</p>
-                )}
-              </div>
+                </div>
+              )}
 
               {/* Close Case */}
               {caseData.status === 'active' && (
@@ -261,6 +295,7 @@ export default function AdminCaseView() {
       {/* Close Case Modal */}
       {showCloseModal && (
         <Modal
+          isOpen={true}
           title="Close Case"
           message="Enter the final outcome to permanently close this case."
           confirmLabel={closeLoading ? 'Closing…' : 'Close Case'}
@@ -292,7 +327,7 @@ export default function AdminCaseView() {
       )}
 
       {toast && (
-        <Toast message={toast.message} type={toast.type} onDismiss={() => setToast(null)} />
+        <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />
       )}
     </div>
   );

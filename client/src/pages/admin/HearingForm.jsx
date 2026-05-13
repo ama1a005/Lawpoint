@@ -58,6 +58,7 @@ export default function HearingForm({ caseId, hearing = null, onClose, onSuccess
 
   return (
     <Modal
+      isOpen={true}
       title={isUpdate ? 'Update Hearing' : 'Schedule Hearing'}
       confirmLabel={loading ? 'Saving…' : isUpdate ? 'Save Update' : 'Schedule Hearing'}
       onConfirm={handleSubmit}

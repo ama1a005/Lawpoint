@@ -13,8 +13,8 @@ const AI_CONFIG = {
   },
   gemini: {
     apiKey: process.env.GEMINI_API_KEY || null,
-    baseURL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent',
-    model: 'gemini-1.5-flash',
+    baseURL: 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent',
+    model: 'gemini-2.5-flash',
   },
 };
 

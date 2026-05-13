@@ -5,8 +5,8 @@ const { getLawyers, sendRequest, acceptRequest, declineRequest, getIncomingReque
 
 const router = express.Router();
 
-// Get lawyers list (citizen)
-router.get('/', authMiddleware, rbac('citizen'), getLawyers);
+// Get lawyers list (any authenticated user)
+router.get('/', authMiddleware, getLawyers);
 
 // Send request (citizen)
 router.post('/request', authMiddleware, rbac('citizen'), sendRequest);

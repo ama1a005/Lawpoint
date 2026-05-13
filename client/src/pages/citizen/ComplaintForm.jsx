@@ -231,6 +231,16 @@ const ComplaintForm = () => {
                   'Submit Complaint'
                 )}
               </button>
+
+              {/* Cancel button */}
+              <button
+                type='button'
+                onClick={() => navigate('/dashboard')}
+                disabled={isSubmitting}
+                className='w-full mt-2 text-steel text-body font-semibold px-5 py-2.5 rounded-md hover:bg-sky/20 transition-all'
+              >
+                Cancel
+              </button>
             </form>
           </div>
         )}

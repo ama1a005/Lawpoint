@@ -6,12 +6,15 @@ import LoadingSpinner from '../../components/LoadingSpinner';
 import AISummaryBlock from '../../components/AISummaryBlock';
 import HearingTimeline from '../../components/HearingTimeline';
 import { formatDate } from '../../utils/formatDate';
+import { useAuth } from '../../context/AuthContext';
 import api from '../../api/axios';
 import { USE_MOCK, MOCK_CASES, MOCK_LAWYERS } from '../../utils/mockData';
 
 const CaseDashboard = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const userRole = user?.role || 'citizen';
 
   const [caseData, setCaseData] = useState(null);
   const [lawyerInfo, setLawyerInfo] = useState(null);
@@ -69,6 +72,13 @@ const CaseDashboard = () => {
   const getLawyerActionState = () => {
     if (!caseData) return null;
 
+    // Terminal states — no lawyer actions possible
+    if (caseData.status === 'closed' || caseData.status === 'rejected') {
+      // Still show the assigned lawyer info if one was assigned
+      if (caseData.lawyerId) return 'assigned';
+      return null;
+    }
+
     const requests = caseData.lawyerRequests || [];
     const hasPending = requests.some((r) => r.status === 'pending');
     const hasAccepted = requests.some((r) => r.status === 'accepted');
@@ -85,7 +95,7 @@ const CaseDashboard = () => {
       return 'awaiting';
     }
 
-    if (caseData.status === 'active' && caseData.lawyerId) {
+    if ((caseData.status === 'active') && caseData.lawyerId) {
       return 'assigned';
     }
 
@@ -95,7 +105,7 @@ const CaseDashboard = () => {
   if (isLoading) {
     return (
       <div className='flex min-h-screen bg-ice'>
-        <Navbar role='citizen' />
+        <Navbar role={userRole} />
         <main className='ml-64 flex-1'>
           <LoadingSpinner />
         </main>
@@ -106,7 +116,7 @@ const CaseDashboard = () => {
   if (error) {
     return (
       <div className='flex min-h-screen bg-ice'>
-        <Navbar role='citizen' />
+        <Navbar role={userRole} />
         <main className='ml-64 flex-1'>
           <div className='flex flex-col items-center justify-center py-16 text-center'>
             <p className='text-body text-red-600 mb-4'>{error}</p>
@@ -129,7 +139,7 @@ const CaseDashboard = () => {
 
   return (
     <div className='flex min-h-screen bg-ice'>
-      <Navbar role='citizen' />
+      <Navbar role={userRole} />
 
       <main className='ml-64 flex-1'>
         {/* Page header */}
@@ -180,16 +190,16 @@ const CaseDashboard = () => {
               </div>
             </div>
 
-            {/* 2. AI Summary (only when not pending and aiSummary exists) */}
-            {caseData.status !== 'pending' && caseData.aiSummary && (
+            {/* 2. AI Summary (only after approval — approved/active/closed) */}
+            {['approved', 'active', 'closed'].includes(caseData.status) && caseData.aiSummary && (
               <AISummaryBlock aiSummary={caseData.aiSummary} />
             )}
 
-            {/* 3. Hearing Timeline */}
-            {caseData.hearings && caseData.hearings.length > 0 && (
-              <div>
-                <h2 className='text-h2 font-bold text-navy mb-4'>Hearing Timeline</h2>
-                <HearingTimeline hearings={caseData.hearings} showUpdateButton={false} />
+            {/* 3. Hearing Timeline (show for active/closed cases) */}
+            {['active', 'closed'].includes(caseData.status) && (
+              <div className='bg-white rounded-lg border border-sky shadow-sm p-6'>
+                <h2 className='text-h3 font-semibold text-navy mb-4'>Hearing Timeline</h2>
+                <HearingTimeline hearings={caseData.hearings || []} showUpdateButton={false} />
               </div>
             )}
 
@@ -239,8 +249,8 @@ const CaseDashboard = () => {
 
               {/* Divider */}
               <div className='border-t border-sky pt-4'>
-                {/* Select a Lawyer */}
-                {actionState === 'select' && (
+                {/* Select a Lawyer (citizen only) */}
+                {userRole === 'citizen' && actionState === 'select' && (
                   <button
                     type='button'
                     onClick={() => navigate(`/case/${id}/lawyer`)}
@@ -250,8 +260,8 @@ const CaseDashboard = () => {
                   </button>
                 )}
 
-                {/* Awaiting response */}
-                {actionState === 'awaiting' && (
+                {/* Awaiting response (citizen only) */}
+                {userRole === 'citizen' && actionState === 'awaiting' && (
                   <button
                     type='button'
                     disabled
@@ -261,8 +271,8 @@ const CaseDashboard = () => {
                   </button>
                 )}
 
-                {/* Re-select after all declined */}
-                {actionState === 'reselect' && (
+                {/* Re-select after all declined (citizen only) */}
+                {userRole === 'citizen' && actionState === 'reselect' && (
                   <button
                     type='button'
                     onClick={() => navigate(`/case/${id}/lawyer`)}
@@ -275,7 +285,7 @@ const CaseDashboard = () => {
                 {/* Lawyer assigned */}
                 {actionState === 'assigned' && (
                   <div>
-                    <p className='text-body-lg font-semibold text-navy mb-3'>Your Lawyer</p>
+                    <p className='text-body-lg font-semibold text-navy mb-3'>{userRole === 'citizen' ? 'Your Lawyer' : 'Assigned Lawyer'}</p>
                     {lawyerInfo ? (
                       <div className='bg-ice rounded-md border border-sky p-4'>
                         <p className='text-body font-semibold text-navy'>{lawyerInfo.name}</p>
@@ -290,8 +300,8 @@ const CaseDashboard = () => {
                   </div>
                 )}
 
-                {/* Rejected case message */}
-                {caseData.status === 'rejected' && (
+                {/* Rejected case message (citizen only) */}
+                {userRole === 'citizen' && caseData.status === 'rejected' && (
                   <div className='bg-red-50 border border-red-200 rounded-md p-4'>
                     <p className='text-body font-semibold text-red-700'>Case Rejected</p>
                     <p className='text-caption text-slate mt-1'>

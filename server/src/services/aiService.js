@@ -20,7 +20,7 @@ const sanitiseText = (text) => {
 
 // ── Prompt ─────────────────────────────────────────────────────────────────
 const buildPrompt = (text) => `
-You are a legal complaint classifier for an Indian court management system.
+You are a legal analyst for an Indian court case management system called LawPoint.
 Analyse the complaint below and respond with ONLY a valid JSON object.
 
 Complaint:
@@ -32,15 +32,23 @@ Required JSON format:
 {
   "recommendedCourt": "<criminal | civil | family>",
   "relevanceScore": <float 0.0–1.0>,
-  "parsedSummary": "<2–3 sentence objective summary for admin review>"
+  "parsedSummary": "<2–3 sentence factual case analysis for court administrators>"
 }
 
-Court type guidelines:
-- criminal : IPC offences — theft, assault, murder, fraud, harassment, cybercrime
-- civil    : property disputes, contract breaches, money recovery, tort, defamation
-- family   : divorce, child custody, maintenance, inheritance, domestic violence
+Court classification rules:
+- criminal : IPC offences — theft, robbery, assault, murder, fraud, forgery, harassment, stalking, cybercrime, extortion, cheating
+- civil    : property disputes, contract breaches, money recovery, tort claims, defamation, landlord-tenant disputes, injunctions
+- family   : divorce, child custody, maintenance/alimony, inheritance, domestic violence, adoption, guardianship
 
-Return ONLY the JSON object. No extra text.
+Relevance scoring guidelines:
+- 1.0: Clear legal matter with specific incidents, dates, or evidence mentioned
+- 0.7-0.9: Valid legal complaint but missing some specifics
+- 0.4-0.6: Vague or borderline legal matter
+- 0.0-0.3: Not a clear legal complaint or irrelevant content
+
+For the parsedSummary: Write a concise factual analysis suitable for a court administrator. Focus on the nature of the dispute, parties involved, and recommended legal pathway. Do NOT include personal opinions.
+
+Return ONLY the JSON object. No extra text, no markdown.
 `.trim();
 
 // ── Schema Validation ──────────────────────────────────────────────────────
@@ -71,7 +79,7 @@ const callOpenAI = async (prompt) => {
       model: AI_CONFIG.openai.model,
       messages: [{ role: 'user', content: prompt }],
       response_format: { type: 'json_object' },
-      temperature: 0.2,
+      temperature: 0,
     }),
   });
   if (!res.ok) throw new Error(`OpenAI API error: ${res.status}`);
@@ -87,7 +95,7 @@ const callGemini = async (prompt) => {
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       contents: [{ parts: [{ text: prompt }] }],
-      generationConfig: { temperature: 0.2, responseMimeType: 'application/json' },
+      generationConfig: { temperature: 0, responseMimeType: 'application/json' },
     }),
   });
   if (!res.ok) throw new Error(`Gemini API error: ${res.status}`);

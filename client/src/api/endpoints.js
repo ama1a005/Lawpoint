@@ -13,6 +13,8 @@ export const fileComplaint = (data) => api.post('/api/v1/cases', data);
 export const approveCase = (id, data) => api.patch(`/api/v1/cases/${id}/approve`, data);
 export const rejectCase = (id, data) => api.patch(`/api/v1/cases/${id}/reject`, data);
 export const closeCase = (id, data) => api.patch(`/api/v1/cases/${id}/close`, data);
+export const getAllCases = (status) =>
+  api.get('/api/v1/cases/all', { params: status ? { status } : {} });
 
 // ── Lawyers ───────────────────────────────────────────────────────────
 export const getLawyers = (courtType) =>
