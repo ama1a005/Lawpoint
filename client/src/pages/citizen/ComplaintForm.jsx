@@ -14,6 +14,11 @@ const ComplaintForm = () => {
   const [successData, setSuccessData] = useState(null);
   const [toast, setToast] = useState(null);
 
+  // Draft review state
+  const [review, setReview] = useState(null);
+  const [reviewing, setReviewing] = useState(false);
+  const [reviewError, setReviewError] = useState('');
+
   const navigate = useNavigate();
 
   const validate = () => {
@@ -186,6 +191,97 @@ const ComplaintForm = () => {
                 </p>
                 {errors.description && (
                   <p className='text-caption text-red-600 mt-1'>{errors.description}</p>
+                )}
+
+                {/* Check My Complaint button */}
+                <button
+                  type='button'
+                  onClick={async () => {
+                    if (!description || description.trim().length < 20) return;
+                    setReviewing(true);
+                    setReview(null);
+                    setReviewError('');
+                    try {
+                      const res = await api.post('/api/v1/cases/draft-review', { complaintText: description.trim() });
+                      setReview(res.data.review);
+                    } catch {
+                      setReviewError('Could not analyse your complaint. You can still submit.');
+                    } finally {
+                      setReviewing(false);
+                    }
+                  }}
+                  disabled={reviewing || description.trim().length < 50}
+                  className='mt-1 px-4 py-2 bg-sky/30 text-steel border border-sky rounded-md text-caption font-semibold hover:bg-sky/50 disabled:opacity-40 transition-all'
+                >
+                  {reviewing ? (
+                    <span className='flex items-center gap-2'>
+                      <span className='w-3 h-3 border-2 border-steel border-t-transparent rounded-full animate-spin inline-block' />
+                      Analysing...
+                    </span>
+                  ) : (
+                    '🔍 Check My Complaint'
+                  )}
+                </button>
+                {reviewError && <p className='text-caption text-red-500 mt-1'>{reviewError}</p>}
+
+                {/* Draft Review Feedback Panel */}
+                {review && (
+                  <div className='mt-3 border border-sky rounded-lg p-4 bg-ice space-y-3'>
+                    {/* Score + Grade */}
+                    <div className='flex items-center justify-between'>
+                      <span className='text-body font-semibold text-navy'>Complaint Quality</span>
+                      <div className='flex items-center gap-2'>
+                        <span className='text-h3 font-bold text-navy'>{review.score}/100</span>
+                        <span className={`px-2.5 py-0.5 rounded-full text-caption font-semibold ${
+                          review.grade === 'Strong' ? 'bg-green-100 text-green-800' :
+                          review.grade === 'Moderate' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-red-100 text-red-800'
+                        }`}>{review.grade}</span>
+                      </div>
+                    </div>
+
+                    {/* Admin verdict */}
+                    <div className={`rounded-md px-3 py-2 text-caption ${
+                      review.adminLikelyVerdict === 'Likely to approve' ? 'bg-green-50 text-green-800' :
+                      review.adminLikelyVerdict === 'May request changes' ? 'bg-yellow-50 text-yellow-800' :
+                      'bg-red-50 text-red-800'
+                    }`}>
+                      <span className='font-semibold'>{review.adminLikelyVerdict}</span>
+                      <span className='ml-1.5 opacity-75'>— {review.verdictReason}</span>
+                    </div>
+
+                    {/* Missing elements */}
+                    {review.missingElements?.length > 0 && (
+                      <div>
+                        <p className='text-caption font-semibold text-navy mb-1'>⚠️ What's missing:</p>
+                        <ul className='space-y-0.5'>
+                          {review.missingElements.map((item, i) => (
+                            <li key={i} className='text-caption text-red-700 flex gap-1.5'>
+                              <span>•</span><span>{item}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    {/* Suggestions */}
+                    {review.suggestions?.length > 0 && (
+                      <div>
+                        <p className='text-caption font-semibold text-navy mb-1'>💡 How to improve:</p>
+                        <ul className='space-y-0.5'>
+                          {review.suggestions.map((tip, i) => (
+                            <li key={i} className='text-caption text-steel flex gap-1.5'>
+                              <span>→</span><span>{tip}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+
+                    <button type='button' onClick={() => setReview(null)} className='text-caption text-slate hover:text-navy transition-colors'>
+                      Dismiss
+                    </button>
+                  </div>
                 )}
               </div>
 

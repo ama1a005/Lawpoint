@@ -44,8 +44,9 @@ const LawyerSelect = () => {
           const cType = caseRes.data.case.courtType;
           setCourtType(cType);
 
-          const lawyerRes = await api.get(`/api/v1/lawyers`, {
-            params: { courtType: cType },
+          // Use AI-ranked endpoint
+          const lawyerRes = await api.get('/api/v1/lawyers/ranked', {
+            params: { caseId },
           });
 
           if (lawyerRes.data.success) {
@@ -171,19 +172,43 @@ const LawyerSelect = () => {
                   key={lawyer.lawyerId}
                   className='bg-white rounded-lg border border-sky shadow-sm p-5'
                 >
-                  {/* Top: name + court badge */}
-                  <div className='flex items-start justify-between mb-3'>
-                    <h3 className='text-h3 font-semibold text-navy'>{lawyer.name}</h3>
+                  {/* Top: match score + court badge */}
+                  <div className='flex items-start justify-between mb-2'>
+                    <span className={`px-3 py-1 rounded-full text-caption font-bold ${
+                      lawyer.matchScore >= 75 ? 'bg-green-100 text-green-800' :
+                      lawyer.matchScore >= 50 ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-red-100 text-red-800'
+                    }`}>
+                      Match: {lawyer.matchScore}/100
+                    </span>
                     <Badge status={lawyer.courtType} />
                   </div>
 
-                  {/* Middle: details */}
+                  {/* Name */}
+                  <h3 className='text-h3 font-semibold text-navy mt-2'>{lawyer.name}</h3>
+
+                  {/* Details */}
                   <p className='text-body text-slate'>Bar ID: {lawyer.barId}</p>
-                  <p className='text-body text-slate mb-3'>{lawyer.specialisation}</p>
+                  <p className='text-body text-slate'>{lawyer.specialisation}</p>
+
+                  {/* Stats row */}
+                  <p className='text-caption text-slate mt-1'>
+                    {lawyer.casesHandled} cases · {lawyer.wins}W / {lawyer.losses}L
+                    {lawyer.casesHandled > 0 && (
+                      <span className='ml-1'>({Math.round((lawyer.wins / lawyer.casesHandled) * 100)}% win rate)</span>
+                    )}
+                  </p>
+
+                  {/* AI match reason */}
+                  {lawyer.matchReason && (
+                    <p className='text-caption text-steel mt-2 italic'>
+                      💡 {lawyer.matchReason}
+                    </p>
+                  )}
 
                   {/* Login credentials hint (for demo) */}
                   {lawyer.user && lawyer.user.email && (
-                    <div className='bg-sky/20 rounded-md px-3 py-2 mb-3'>
+                    <div className='bg-sky/20 rounded-md px-3 py-2 mt-3'>
                       <p className='text-caption text-slate'>
                         <span className='font-semibold'>Demo login:</span> {lawyer.user.email} / lawyer1234
                       </p>
@@ -195,7 +220,7 @@ const LawyerSelect = () => {
                     <button
                       type='button'
                       onClick={() => handleRequestClick(lawyer)}
-                      className='w-full bg-steel text-white text-body font-semibold px-5 py-2.5 rounded-md shadow-sm hover:bg-navy-mid active:scale-95 transition-all'
+                      className='w-full mt-3 bg-steel text-white text-body font-semibold px-5 py-2.5 rounded-md shadow-sm hover:bg-navy-mid active:scale-95 transition-all'
                     >
                       Request Lawyer
                     </button>
@@ -203,7 +228,7 @@ const LawyerSelect = () => {
                     <button
                       type='button'
                       disabled
-                      className='w-full bg-sky text-slate text-body font-semibold px-5 py-2.5 rounded-md cursor-not-allowed opacity-60'
+                      className='w-full mt-3 bg-sky text-slate text-body font-semibold px-5 py-2.5 rounded-md cursor-not-allowed opacity-60'
                     >
                       Unavailable
                     </button>

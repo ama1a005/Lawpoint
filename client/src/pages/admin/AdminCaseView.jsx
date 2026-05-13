@@ -24,6 +24,7 @@ export default function AdminCaseView() {
   // Modals
   const [showCloseModal, setShowCloseModal] = useState(false);
   const [outcomeNote, setOutcomeNote] = useState('');
+  const [caseOutcome, setCaseOutcome] = useState('');
   const [closeLoading, setCloseLoading] = useState(false);
 
   const [showHearingForm, setShowHearingForm] = useState(false);
@@ -63,10 +64,11 @@ export default function AdminCaseView() {
         await new Promise((r) => setTimeout(r, 600));
         setCaseData((prev) => ({ ...prev, status: 'closed', outcome: outcomeNote, closedAt: new Date().toISOString() }));
       } else {
-        await closeCase(id, { outcomeNote });
+        await closeCase(id, { outcomeNote, caseOutcome: caseOutcome || undefined });
         await fetchCase();
       }
       setShowCloseModal(false);
+      setCaseOutcome('');
       setToast({ message: 'Case closed successfully.', type: 'success' });
     } catch {
       setToast({ message: 'Failed to close case.', type: 'error' });
@@ -247,6 +249,12 @@ export default function AdminCaseView() {
                       <p className="text-h3 font-semibold text-navy">{assignedLawyer.name}</p>
                       <p className="text-body text-slate">{assignedLawyer.barId}</p>
                       <p className="text-body text-slate">{assignedLawyer.specialisation}</p>
+                      <p className="text-caption text-slate mt-1">
+                        {assignedLawyer.casesHandled || 0} cases · {assignedLawyer.wins || 0}W / {assignedLawyer.losses || 0}L
+                        {(assignedLawyer.casesHandled || 0) > 0 && (
+                          <span className="ml-1">({Math.round(((assignedLawyer.wins || 0) / assignedLawyer.casesHandled) * 100)}%)</span>
+                        )}
+                      </p>
                     </div>
                   ) : (
                     <p className="text-body text-slate italic">Awaiting lawyer assignment</p>
@@ -284,6 +292,14 @@ export default function AdminCaseView() {
               {caseData.status === 'closed' && caseData.outcome && (
                 <div className="pt-4 border-t border-sky/50">
                   <p className="text-caption text-slate mb-1">Final Outcome</p>
+                  {caseData.caseOutcome && (
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-caption font-semibold mb-2 ${
+                      caseData.caseOutcome === 'won' ? 'bg-green-100 text-green-800' :
+                      caseData.caseOutcome === 'lost' ? 'bg-red-100 text-red-700' :
+                      caseData.caseOutcome === 'settlement' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-slate/20 text-slate'
+                    }`}>{caseData.caseOutcome.charAt(0).toUpperCase() + caseData.caseOutcome.slice(1)}</span>
+                  )}
                   <p className="text-body text-navy">{caseData.outcome}</p>
                 </div>
               )}
@@ -300,9 +316,24 @@ export default function AdminCaseView() {
           message="Enter the final outcome to permanently close this case."
           confirmLabel={closeLoading ? 'Closing…' : 'Close Case'}
           onConfirm={handleClose}
-          onCancel={() => { setShowCloseModal(false); setOutcomeNote(''); }}
+          onCancel={() => { setShowCloseModal(false); setOutcomeNote(''); setCaseOutcome(''); }}
           danger
         >
+          {/* Case outcome dropdown */}
+          <div className="mt-2 mb-3">
+            <label className="block text-caption text-slate mb-1">Case Outcome</label>
+            <select
+              value={caseOutcome}
+              onChange={(e) => setCaseOutcome(e.target.value)}
+              className="w-full bg-white border border-sky rounded-md px-4 py-2.5 text-body text-navy focus:outline-none focus:ring-2 focus:ring-steel/40 focus:border-steel transition-colors"
+            >
+              <option value="">Select outcome...</option>
+              <option value="won">Won</option>
+              <option value="lost">Lost</option>
+              <option value="settlement">Settlement</option>
+              <option value="dismissed">Dismissed</option>
+            </select>
+          </div>
           <textarea
             value={outcomeNote}
             onChange={(e) => setOutcomeNote(e.target.value)}

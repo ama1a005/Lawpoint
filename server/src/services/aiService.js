@@ -104,12 +104,22 @@ const callGemini = async (prompt) => {
 };
 
 // ── Public API ─────────────────────────────────────────────────────────────
+
+/**
+ * Generic AI call helper — tries OpenAI first, falls back to Gemini.
+ * Returns raw text response. Throws if neither key is configured.
+ */
+const callAI = async (prompt) => {
+  if (AI_CONFIG.openai.apiKey) {
+    return await callOpenAI(prompt);
+  } else if (AI_CONFIG.gemini.apiKey) {
+    return await callGemini(prompt);
+  }
+  throw new Error('No AI API key configured');
+};
+
 /**
  * Assess a complaint and recommend a court type.
- * Raw LLM output never leaves this function — only validated schema fields are returned.
- *
- * @param {string} complaintText - Raw complaint text (may contain PII).
- * @returns {{ recommendedCourt: string, relevanceScore: number, parsedSummary: string }}
  */
 const assessComplaint = async (complaintText) => {
   const sanitised = sanitiseText(complaintText);
@@ -142,4 +152,137 @@ const assessComplaint = async (complaintText) => {
   }
 };
 
-module.exports = { assessComplaint };
+/**
+ * Score lawyers for a case based on their profiles and the complaint text.
+ * @param {string} sanitisedText - PII-stripped complaint text
+ * @param {Array} lawyers - Array of lawyer objects with stats
+ * @returns {Array<{ lawyerId, score, matchReason }>}
+ */
+const scoreLawyersForCase = async (sanitisedText, lawyers) => {
+  const lawyerProfiles = lawyers.map(l => ({
+    lawyerId:       l.lawyerId,
+    specialisation: l.specialisation,
+    casesHandled:   l.casesHandled || 0,
+    wins:           l.wins || 0,
+    losses:         l.losses || 0,
+    winRate:        (l.casesHandled || 0) > 0
+                      ? Math.round(((l.wins || 0) / l.casesHandled) * 100)
+                      : null,
+    recentCaseTypes: l.recentCaseTypes || [],
+  }));
+
+  const prompt = `
+You are a legal case matching assistant for the LawPoint court management system.
+
+A citizen has filed the following complaint:
+"${sanitisedText}"
+
+Below is a list of available lawyers with their profiles:
+${JSON.stringify(lawyerProfiles, null, 2)}
+
+For each lawyer, return a match score from 0 to 100 and a one-sentence reason.
+
+Scoring criteria:
+- Higher score if their specialisation closely matches the complaint topic
+- Higher score if their recent case types are similar to this complaint
+- Higher score if their win rate is strong (above 60%)
+- Lower score if they have very few cases handled (less experience)
+- Lower score if their recent work is unrelated to this complaint
+
+Respond ONLY with a JSON array, one object per lawyer:
+[
+  { "lawyerId": "copy-from-input", "score": 0-100, "matchReason": "one sentence for citizen" }
+]
+
+No extra text outside the JSON array.
+  `.trim();
+
+  try {
+    const raw = await callAI(prompt);
+    // Clean potential markdown code fences
+    const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    for (const entry of parsed) {
+      if (!entry.lawyerId || entry.score === undefined || !entry.matchReason) {
+        throw new Error(`Incomplete score entry for lawyerId: ${entry.lawyerId}`);
+      }
+      entry.score = Math.max(0, Math.min(100, Math.round(entry.score)));
+    }
+
+    return parsed;
+  } catch (err) {
+    console.error('[aiService] Lawyer scoring failed:', err.message);
+    // Return neutral scores as fallback
+    return lawyers.map(l => ({
+      lawyerId: l.lawyerId,
+      score: 50,
+      matchReason: 'AI scoring unavailable — default match score applied.',
+    }));
+  }
+};
+
+/**
+ * Score a complaint draft for quality before submission.
+ * @param {string} draftText - Raw complaint draft
+ * @returns {{ score, grade, missingElements[], suggestions[], adminLikelyVerdict, verdictReason }}
+ */
+const scoreComplaintDraft = async (draftText) => {
+  const sanitised = sanitiseText(draftText);
+
+  const prompt = `
+You are a legal complaint quality reviewer helping a citizen improve their complaint
+before it is reviewed by a court administrator.
+
+Analyse the following complaint draft:
+"${sanitised}"
+
+Evaluate it on these criteria:
+1. Clarity — Is the problem clearly described?
+2. Specificity — Are dates, locations, or specific incidents mentioned?
+3. Evidence signals — Does the citizen reference any proof, witnesses, or documentation?
+4. Legal relevance — Does the complaint describe an actionable grievance?
+5. Completeness — Are there obvious gaps a court official would question?
+
+Respond ONLY with a JSON object containing exactly these fields:
+
+{
+  "score": integer 0-100,
+  "grade": "Strong" | "Moderate" | "Weak",
+  "missingElements": ["specific things absent from the complaint"],
+  "suggestions": ["concrete, actionable advice for the citizen"],
+  "adminLikelyVerdict": "Likely to approve" | "May request changes" | "Likely to reject",
+  "verdictReason": "one sentence explaining the prediction"
+}
+
+Be honest but constructive. Write suggestions in simple language.
+Return ONLY the JSON object. No extra text, no markdown.
+  `.trim();
+
+  try {
+    const raw = await callAI(prompt);
+    const cleaned = raw.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+    const parsed = JSON.parse(cleaned);
+
+    const required = ['score', 'grade', 'missingElements', 'suggestions', 'adminLikelyVerdict', 'verdictReason'];
+    for (const field of required) {
+      if (!(field in parsed)) throw new Error(`Draft review missing field: ${field}`);
+    }
+
+    parsed.score = Math.max(0, Math.min(100, Math.round(parsed.score)));
+    return parsed;
+  } catch (err) {
+    console.error('[aiService] Draft review failed:', err.message);
+    return {
+      score: 50,
+      grade: 'Moderate',
+      missingElements: ['AI review unavailable — could not analyse your complaint'],
+      suggestions: ['Try adding specific dates, locations, and evidence to strengthen your complaint'],
+      adminLikelyVerdict: 'May request changes',
+      verdictReason: 'AI review unavailable — default assessment applied.',
+    };
+  }
+};
+
+module.exports = { assessComplaint, scoreLawyersForCase, scoreComplaintDraft };
+

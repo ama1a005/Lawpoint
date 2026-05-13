@@ -7,6 +7,7 @@ const AISummary = require('./AISummary');
 const Hearing = require('./Hearing');
 const Notification = require('./Notification');
 const LawyerRequest = require('./LawyerRequest');
+const LawyerMatchScore = require('./LawyerMatchScore');
 
 // Set up associations
 Case.hasOne(AISummary, { foreignKey: 'caseId', onDelete: 'CASCADE' });
@@ -24,6 +25,15 @@ LawyerRequest.belongsTo(Case, { foreignKey: 'caseId' });
 LawyerRequest.belongsTo(Lawyer, { foreignKey: 'lawyerId' });
 Lawyer.hasMany(LawyerRequest, { foreignKey: 'lawyerId' });
 
+Case.hasMany(LawyerMatchScore, { foreignKey: 'caseId', onDelete: 'CASCADE' });
+LawyerMatchScore.belongsTo(Case, { foreignKey: 'caseId' });
+
+Lawyer.hasMany(LawyerMatchScore, { foreignKey: 'lawyerId' });
+LawyerMatchScore.belongsTo(Lawyer, { foreignKey: 'lawyerId' });
+
+// Case belongs to a Lawyer (assigned)
+Case.belongsTo(Lawyer, { foreignKey: 'lawyerId', as: 'assignedLawyer' });
+
 module.exports = {
   User,
   Citizen,
@@ -34,4 +44,5 @@ module.exports = {
   Hearing,
   Notification,
   LawyerRequest,
+  LawyerMatchScore,
 };

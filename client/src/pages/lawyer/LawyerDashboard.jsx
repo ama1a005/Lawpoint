@@ -7,14 +7,17 @@ import RequestCard from './RequestCard';
 import { formatDate } from '../../utils/formatDate';
 import api from '../../api/axios';
 import { USE_MOCK, MOCK_REQUESTS, MOCK_CASES } from '../../utils/mockData';
+import { useAuth } from '../../context/AuthContext';
 
 const LawyerDashboard = () => {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   const [requests, setRequests] = useState([]);
   const [activeCases, setActiveCases] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
+  const [stats, setStats] = useState(null);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -24,11 +27,21 @@ const LawyerDashboard = () => {
       if (USE_MOCK) {
         await new Promise((r) => setTimeout(r, 600));
         setRequests(MOCK_REQUESTS);
-        // Show cases that have an assigned lawyer as "active" cases
         setActiveCases(
           MOCK_CASES.filter((c) => c.status === 'active').map(({ caseId, title, status, filedAt }) => ({ caseId, title, status, filedAt }))
         );
       } else {
+        // Fetch lawyer stats
+        const meRes = await api.get('/api/v1/auth/me');
+        if (meRes.data.success && meRes.data.user) {
+          setStats({
+            casesHandled: meRes.data.user.casesHandled || 0,
+            wins: meRes.data.user.wins || 0,
+            losses: meRes.data.user.losses || 0,
+            winRate: meRes.data.user.winRate || 0,
+          });
+        }
+
         const reqRes = await api.get('/api/v1/lawyers/requests/incoming');
         if (reqRes.data.success) {
           setRequests(reqRes.data.requests);
@@ -107,6 +120,28 @@ const LawyerDashboard = () => {
 
           {!isLoading && !error && (
             <>
+              {/* ========== STAT CARDS ========== */}
+              {stats && (
+                <div className='grid grid-cols-2 md:grid-cols-4 gap-4 mb-8'>
+                  <div className='bg-white rounded-lg border border-sky shadow-sm p-5 text-center'>
+                    <p className='text-caption text-slate'>Cases Handled</p>
+                    <p className='text-h1 font-bold text-navy mt-1'>{stats.casesHandled}</p>
+                  </div>
+                  <div className='bg-white rounded-lg border border-sky shadow-sm p-5 text-center'>
+                    <p className='text-caption text-slate'>Wins</p>
+                    <p className='text-h1 font-bold text-green-700 mt-1'>{stats.wins}</p>
+                  </div>
+                  <div className='bg-white rounded-lg border border-sky shadow-sm p-5 text-center'>
+                    <p className='text-caption text-slate'>Losses</p>
+                    <p className='text-h1 font-bold text-red-600 mt-1'>{stats.losses}</p>
+                  </div>
+                  <div className='bg-white rounded-lg border border-sky shadow-sm p-5 text-center'>
+                    <p className='text-caption text-slate'>Win Rate</p>
+                    <p className='text-h1 font-bold text-steel mt-1'>{stats.winRate}%</p>
+                  </div>
+                </div>
+              )}
+
               {/* ========== SECTION 1: Incoming Requests ========== */}
               <div>
                 <h2 className='text-h2 font-bold text-navy mb-4'>Incoming Requests</h2>

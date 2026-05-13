@@ -41,7 +41,10 @@ const CaseDashboard = () => {
             const data = response.data.case;
             setCaseData(data);
 
-            if (data.lawyerId) {
+            // Lawyer info now comes directly from the case response (via assignedLawyer include)
+            if (data.lawyer) {
+              setLawyerInfo(data.lawyer);
+            } else if (data.lawyerId) {
               try {
                 const lawyerRes = await api.get('/api/v1/lawyers');
                 if (lawyerRes.data.success) {
@@ -208,7 +211,17 @@ const CaseDashboard = () => {
             {/* 4. Final Outcome (only when closed) */}
             {caseData.status === 'closed' && (
               <div className='bg-navy/5 border border-sky rounded-lg p-5'>
-                <h3 className='text-h3 font-semibold text-navy'>Case Closed</h3>
+                <div className='flex items-center gap-3'>
+                  <h3 className='text-h3 font-semibold text-navy'>Case Closed</h3>
+                  {caseData.caseOutcome && (
+                    <span className={`inline-flex px-2.5 py-0.5 rounded-full text-caption font-semibold ${
+                      caseData.caseOutcome === 'won' ? 'bg-green-100 text-green-800' :
+                      caseData.caseOutcome === 'lost' ? 'bg-red-100 text-red-700' :
+                      caseData.caseOutcome === 'settlement' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-slate/20 text-slate'
+                    }`}>{caseData.caseOutcome.charAt(0).toUpperCase() + caseData.caseOutcome.slice(1)}</span>
+                  )}
+                </div>
                 {caseData.closedAt && (
                   <p className='text-caption text-slate mt-1'>
                     Closed on {formatDate(caseData.closedAt)}
@@ -293,6 +306,14 @@ const CaseDashboard = () => {
                         <p className='text-body font-semibold text-navy'>{lawyerInfo.name}</p>
                         <p className='text-caption text-slate mt-1'>Bar ID: {lawyerInfo.barId}</p>
                         <p className='text-caption text-slate'>{lawyerInfo.specialisation}</p>
+                        {(lawyerInfo.casesHandled != null) && (
+                          <p className='text-caption text-slate mt-1'>
+                            {lawyerInfo.casesHandled} cases · {lawyerInfo.wins || 0}W / {lawyerInfo.losses || 0}L
+                            {lawyerInfo.casesHandled > 0 && (
+                              <span className='ml-1'>({Math.round(((lawyerInfo.wins || 0) / lawyerInfo.casesHandled) * 100)}% win rate)</span>
+                            )}
+                          </p>
+                        )}
                       </div>
                     ) : (
                       <p className='text-body text-slate'>

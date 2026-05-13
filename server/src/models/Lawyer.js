@@ -37,6 +37,22 @@ const Lawyer = sequelize.define('Lawyer', {
     type: DataTypes.BOOLEAN,
     defaultValue: true,
   },
+  casesHandled: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  wins: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  losses: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  recentCaseTypes: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+  },
 }, {
   timestamps: false,
 });

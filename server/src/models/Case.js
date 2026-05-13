@@ -55,6 +55,10 @@ const Case = sequelize.define('Case', {
     type: DataTypes.TEXT,
     allowNull: true,
   },
+  caseOutcome: {
+    type: DataTypes.ENUM('won', 'lost', 'settlement', 'dismissed'),
+    allowNull: true,
+  },
 }, {
   timestamps: false,
 });

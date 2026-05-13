@@ -1,4 +1,5 @@
-const { Lawyer, LawyerRequest, Case, AISummary, Notification, User } = require('../models');
+const { Lawyer, LawyerRequest, LawyerMatchScore, Case, AISummary, Notification, User } = require('../models');
+const { scoreLawyersForCase } = require('../services/aiService');
 const notificationService = require('../services/notificationService');
 
 // ── Helper ─────────────────────────────────────────────────────────────────
@@ -157,4 +158,88 @@ const getIncomingRequests = async (req, res) => {
   }
 };
 
-module.exports = { getLawyers, sendRequest, acceptRequest, declineRequest, getIncomingRequests };
+// ── Get Ranked Lawyers (citizen) ───────────────────────────────────────────
+const getRankedLawyers = async (req, res) => {
+  try {
+    const { caseId } = req.query;
+    if (!caseId) {
+      return res.status(400).json({ success: false, message: 'caseId is required' });
+    }
+
+    const caseRecord = await Case.findByPk(caseId);
+    if (!caseRecord) {
+      return res.status(404).json({ success: false, message: 'Case not found' });
+    }
+
+    const lawyers = await Lawyer.findAll({
+      where: {
+        courtType: caseRecord.courtType,
+        isAvailable: true,
+      },
+      include: [{ model: User, attributes: ['email'] }],
+    });
+
+    if (lawyers.length === 0) {
+      return res.json({ success: true, lawyers: [] });
+    }
+
+    // Check if scores already cached for this case
+    const existingScores = await LawyerMatchScore.findAll({ where: { caseId } });
+    let scoreMap = {};
+
+    if (existingScores.length >= lawyers.length) {
+      existingScores.forEach(s => {
+        scoreMap[s.lawyerId] = { score: s.score, matchReason: s.matchReason };
+      });
+    } else {
+      // Sanitise PII before sending to AI
+      const sanitisedText = caseRecord.complaintText
+        .replace(/\b\d{10}\b/g, '[PHONE]')
+        .replace(/\S+@\S+\.\S+/g, '[EMAIL]');
+
+      const aiScores = await scoreLawyersForCase(sanitisedText, lawyers);
+
+      // Persist scores
+      for (const entry of aiScores) {
+        await LawyerMatchScore.findOrCreate({
+          where: { caseId, lawyerId: entry.lawyerId },
+          defaults: {
+            caseId,
+            lawyerId: entry.lawyerId,
+            score: entry.score,
+            matchReason: entry.matchReason,
+          },
+        });
+        scoreMap[entry.lawyerId] = { score: entry.score, matchReason: entry.matchReason };
+      }
+    }
+
+    // Merge scores into lawyer objects and sort
+    const rankedLawyers = lawyers
+      .map(l => {
+        const plain = l.toJSON();
+        return {
+          lawyerId:       plain.lawyerId,
+          name:           plain.name,
+          barId:          plain.barId,
+          specialisation: plain.specialisation,
+          courtType:      plain.courtType,
+          isAvailable:    plain.isAvailable,
+          casesHandled:   plain.casesHandled || 0,
+          wins:           plain.wins || 0,
+          losses:         plain.losses || 0,
+          recentCaseTypes: plain.recentCaseTypes || [],
+          user:           plain.User ? { email: plain.User.email } : null,
+          matchScore:     scoreMap[plain.lawyerId]?.score ?? 0,
+          matchReason:    scoreMap[plain.lawyerId]?.matchReason ?? 'No score available',
+        };
+      })
+      .sort((a, b) => b.matchScore - a.matchScore);
+
+    return res.json({ success: true, lawyers: rankedLawyers });
+  } catch (err) {
+    return res.status(500).json({ success: false, message: 'Failed to rank lawyers', error: err.message });
+  }
+};
+
+module.exports = { getLawyers, sendRequest, acceptRequest, declineRequest, getIncomingRequests, getRankedLawyers };

@@ -1,4 +1,5 @@
 const { Case, AISummary, Hearing, Notification, LawyerRequest, Lawyer, User } = require('../models');
+const { scoreComplaintDraft } = require('../services/aiService');
 const aiService = require('../services/aiService');
 const notificationService = require('../services/notificationService');
 
@@ -57,6 +58,7 @@ const getCase = async (req, res) => {
         { model: Hearing },
         { model: Notification },
         { model: LawyerRequest, include: [{ model: Lawyer }] },
+        { model: Lawyer, as: 'assignedLawyer', attributes: ['lawyerId', 'name', 'barId', 'specialisation', 'courtType', 'casesHandled', 'wins', 'losses', 'recentCaseTypes'] },
       ],
     });
 
@@ -68,10 +70,12 @@ const getCase = async (req, res) => {
     plain.hearings = plain.Hearings || [];
     plain.notifications = plain.Notifications || [];
     plain.lawyerRequests = plain.LawyerRequests || [];
+    plain.lawyer = plain.assignedLawyer || null;
     delete plain.AISummary;
     delete plain.Hearings;
     delete plain.Notifications;
     delete plain.LawyerRequests;
+    delete plain.assignedLawyer;
 
     res.json({ success: true, case: plain });
   } catch (err) {
@@ -248,13 +252,41 @@ const rejectCase = async (req, res) => {
 const closeCase = async (req, res) => {
   try {
     const { id } = req.params;
-    const { outcomeNote } = req.body;
+    const { outcomeNote, caseOutcome } = req.body;
 
     const caseData = await Case.findByPk(id);
     if (!caseData) return res.status(404).json({ success: false, message: 'Case not found' });
     if (caseData.status === 'closed') return res.status(400).json({ success: false, message: 'Case is already closed.' });
 
-    await caseData.update({ status: 'closed', closedAt: new Date(), outcome: outcomeNote });
+    await caseData.update({
+      status: 'closed',
+      closedAt: new Date(),
+      outcome: outcomeNote,
+      caseOutcome: caseOutcome || null,
+    });
+
+    // Auto-update lawyer stats
+    if (caseData.lawyerId) {
+      const lawyer = await Lawyer.findByPk(caseData.lawyerId);
+      if (lawyer) {
+        const isWin = caseOutcome === 'won';
+        const isLoss = caseOutcome === 'lost';
+
+        // Extract a keyword from the case title for recentCaseTypes
+        const caseKeyword = caseData.title.toLowerCase().slice(0, 40);
+        const updatedRecent = [
+          caseKeyword,
+          ...(lawyer.recentCaseTypes || []),
+        ].slice(0, 10);
+
+        await lawyer.update({
+          casesHandled: lawyer.casesHandled + 1,
+          wins:         isWin ? lawyer.wins + 1 : lawyer.wins,
+          losses:       isLoss ? lawyer.losses + 1 : lawyer.losses,
+          recentCaseTypes: updatedRecent,
+        });
+      }
+    }
 
     res.json({ success: true, message: 'Case closed.', case: caseData });
   } catch (err) {
@@ -262,4 +294,23 @@ const closeCase = async (req, res) => {
   }
 };
 
-module.exports = { fileComplaint, getCase, getMyCases, getPendingCases, getAllCases, approveCase, rejectCase, closeCase };
+// ── Review Draft ───────────────────────────────────────────────────────────
+const reviewDraft = async (req, res) => {
+  try {
+    const { complaintText } = req.body;
+
+    if (!complaintText || complaintText.trim().length < 20) {
+      return res.status(400).json({
+        success: false,
+        message: 'Complaint text must be at least 20 characters to review.',
+      });
+    }
+
+    const review = await scoreComplaintDraft(complaintText);
+    res.json({ success: true, review });
+  } catch (err) {
+    res.status(500).json({ success: false, message: 'Could not review complaint draft', error: err.message });
+  }
+};
+
+module.exports = { fileComplaint, getCase, getMyCases, getPendingCases, getAllCases, approveCase, rejectCase, closeCase, reviewDraft };

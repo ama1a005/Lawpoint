@@ -80,7 +80,7 @@ const login = async (req, res) => {
   }
 };
 
-// Get current user (extended with citizen profile)
+// Get current user (extended with citizen/lawyer profile)
 const getMe = async (req, res) => {
   try {
     const user = await User.findByPk(req.user.userId);
@@ -92,6 +92,23 @@ const getMe = async (req, res) => {
       if (citizen) {
         result.phone = citizen.phone;
         result.address = citizen.address;
+      }
+    }
+
+    // Include lawyer stats if applicable
+    if (user.role === 'lawyer') {
+      const lawyer = await Lawyer.findOne({ where: { userId: user.userId } });
+      if (lawyer) {
+        result.lawyerId = lawyer.lawyerId;
+        result.specialisation = lawyer.specialisation;
+        result.courtType = lawyer.courtType;
+        result.barId = lawyer.barId;
+        result.casesHandled = lawyer.casesHandled;
+        result.wins = lawyer.wins;
+        result.losses = lawyer.losses;
+        result.winRate = lawyer.casesHandled > 0
+          ? Math.round((lawyer.wins / lawyer.casesHandled) * 100)
+          : 0;
       }
     }
 
