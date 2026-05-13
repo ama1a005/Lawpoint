@@ -19,7 +19,7 @@ const getLawyers = async (req, res) => {
 
     const lawyers = await Lawyer.findAll({
       where,
-      attributes: ['lawyerId', 'name', 'barId', 'specialisation', 'courtType', 'isAvailable'],
+      attributes: ['lawyerId', 'name', 'barId', 'specialisation', 'courtType', 'isAvailable', 'casesHandled', 'wins', 'losses', 'recentCaseTypes'],
       include: [{ model: User, attributes: ['email'] }],
     });
 
