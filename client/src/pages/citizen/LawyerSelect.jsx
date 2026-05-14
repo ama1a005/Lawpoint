@@ -194,25 +194,13 @@ const LawyerSelect = () => {
                   {/* Stats row */}
                   <p className='text-caption text-slate mt-1'>
                     {lawyer.casesHandled} cases · {lawyer.wins}W / {lawyer.losses}L
-                    {lawyer.casesHandled > 0 && (
-                      <span className='ml-1'>({Math.round((lawyer.wins / lawyer.casesHandled) * 100)}% win rate)</span>
-                    )}
                   </p>
 
                   {/* AI match reason */}
                   {lawyer.matchReason && (
                     <p className='text-caption text-steel mt-2 italic'>
-                      💡 {lawyer.matchReason}
+                      {lawyer.matchReason}
                     </p>
-                  )}
-
-                  {/* Login credentials hint (for demo) */}
-                  {lawyer.user && lawyer.user.email && (
-                    <div className='bg-sky/20 rounded-md px-3 py-2 mt-3'>
-                      <p className='text-caption text-slate'>
-                        <span className='font-semibold'>Demo login:</span> {lawyer.user.email} / lawyer1234
-                      </p>
-                    </div>
                   )}
 
                   {/* Bottom: action button */}

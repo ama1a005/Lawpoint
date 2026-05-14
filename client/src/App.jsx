@@ -25,14 +25,15 @@ import AdminCaseView from './pages/admin/AdminCaseView';
 // Misc
 import NotFound from './pages/NotFound';
 import Forbidden from './pages/Forbidden';
+import SplashPage from './pages/SplashPage';
 
 function App() {
   return (
     <AuthProvider>
       <BrowserRouter>
         <Routes>
-          {/* Root redirect */}
-          <Route path='/' element={<Navigate to='/login' replace />} />
+          {/* Splash page at root */}
+          <Route path='/' element={<SplashPage />} />
 
           {/* Public routes */}
           <Route path='/login' element={<Login />} />

@@ -237,12 +237,17 @@ before it is reviewed by a court administrator.
 Analyse the following complaint draft:
 "${sanitised}"
 
-Evaluate it on these criteria:
-1. Clarity — Is the problem clearly described?
-2. Specificity — Are dates, locations, or specific incidents mentioned?
+Evaluate it on these criteria (IGNORE any personal information like names, phone numbers, emails, addresses — score ONLY based on how the complaint is written):
+1. Clarity — Is the problem clearly described and easy to understand?
+2. Specificity — Are relevant dates, locations, or specific incidents mentioned?
 3. Evidence signals — Does the citizen reference any proof, witnesses, or documentation?
 4. Legal relevance — Does the complaint describe an actionable grievance?
-5. Completeness — Are there obvious gaps a court official would question?
+5. Completeness — Are all relevant details provided that a court official would need?
+
+Do NOT penalise or reward based on personal details. Focus entirely on:
+- How well the complaint is phrased
+- Whether all relevant factual details are given
+- Whether the grievance is clearly articulated
 
 Respond ONLY with a JSON object containing exactly these fields:
 
@@ -299,20 +304,28 @@ You are a legal writing assistant for a court complaint filing system.
 A citizen has written the following complaint draft:
 "${sanitised}"
 
-Rewrite this complaint to make it stronger and more effective for court review. Follow these rules:
+First, internally analyse this complaint for:
+- Clarity of the problem statement
+- Whether relevant dates, locations, and incidents are mentioned
+- Whether evidence or documentation is referenced
+- Whether the grievance is clearly actionable
+- Any obvious gaps a court official would question
 
-1. PRESERVE every fact, date, name, location, and detail from the original — do NOT invent or assume new facts
-2. Improve clarity and structure — use clear paragraphs
-3. Add formal legal tone while keeping it readable
-4. Highlight key evidence and damages mentioned
-5. Make the timeline of events clearer if dates are mentioned
-6. Keep the length reasonable — don't make it excessively longer than the original
-7. Write in first person as the citizen
+Then, using your analysis, rewrite the complaint to address weaknesses. Follow these rules:
+
+1. PRESERVE every fact, date, and detail from the original — do NOT invent or assume new facts
+2. REMOVE any personal information (phone numbers, email addresses, Aadhaar numbers, etc.) from the rewritten text — replace with generic placeholders like [contact details on file]
+3. Improve clarity and structure — use clear paragraphs
+4. Add formal legal tone while keeping it readable
+5. Highlight key evidence and damages mentioned
+6. Make the timeline of events clearer if dates are mentioned
+7. Keep the length reasonable — don't make it excessively longer than the original
+8. Write in first person as the citizen
 
 Respond ONLY with a JSON object:
 {
-  "refinedText": "the improved complaint text",
-  "changesSummary": "one sentence describing what you changed"
+  "refinedText": "the improved complaint text with PII removed",
+  "changesSummary": "one sentence describing what you improved"
 }
 
 No extra text outside the JSON.

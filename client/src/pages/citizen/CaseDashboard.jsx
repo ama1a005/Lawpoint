@@ -309,9 +309,6 @@ const CaseDashboard = () => {
                         {(lawyerInfo.casesHandled != null) && (
                           <p className='text-caption text-slate mt-1'>
                             {lawyerInfo.casesHandled} cases · {lawyerInfo.wins || 0}W / {lawyerInfo.losses || 0}L
-                            {lawyerInfo.casesHandled > 0 && (
-                              <span className='ml-1'>({Math.round(((lawyerInfo.wins || 0) / lawyerInfo.casesHandled) * 100)}% win rate)</span>
-                            )}
                           </p>
                         )}
                       </div>
