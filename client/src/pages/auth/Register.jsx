@@ -120,8 +120,11 @@ const Register = () => {
     <div className='min-h-screen bg-ice flex flex-col'>
       {/* Top bar */}
       <header className='w-full bg-white border-b border-sky shadow-sm'>
-        <div className='max-w-container mx-auto px-6 h-16 flex items-center justify-between'>
-          <span className='text-h3 font-bold text-navy'>LawPoint</span>
+        <div className='max-w-container mx-auto px-6 h-16 flex items-center'>
+          <Link to='/' className='flex items-center gap-3 no-underline'>
+            <img src='/logo.svg' alt='LawPoint' className='w-7 h-7 text-navy' />
+            <span className='text-h3 font-bold text-navy'>LawPoint</span>
+          </Link>
         </div>
       </header>
 

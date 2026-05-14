@@ -11,18 +11,16 @@ const SplashPage = () => {
     <div className='min-h-screen flex flex-col bg-[#f7f9fb] text-[#191c1e]' style={{ fontFamily: "'Public Sans', sans-serif" }}>
       {/* TopAppBar */}
       <header className='w-full sticky top-0 bg-[#f7f9fb] border-b border-[#c5c6d0] z-50'>
-        <div className='flex justify-between items-center max-w-7xl mx-auto px-4 md:px-10 w-full h-20'>
+        <div className='flex items-center max-w-7xl mx-auto px-4 md:px-10 w-full h-20'>
           <div className='flex items-center gap-4'>
             <img
               alt='LawPoint Logo'
-              className='h-10 w-10 object-contain'
-              src='https://lh3.googleusercontent.com/aida-public/AB6AXuDTMKcir6K9iCqMUOSF8dUwO-xg3_rPdKT5U528vcqfuqcDjrFkcO4ov9RsFTuN02XsKN2Ee1wEdKIiA91HCqvtf5e3AGhdYi9wmKTKWFIecee7YhkqHpSyQ-k1QbBqKeQU7F-YYNPNqB-ICb_8dJ2py95KUlzx_WylCRa8zz6B8rKN478TR2WgbndrfLF13266Zi4fWnnn2dXis131iJDWen__0M0cfoAPFJLbwBoQgrWoI3YIoYkUzfzq1EC9DCMAGeryOyiQMmZf'
+              className='h-10 w-10 object-contain text-[#102758]'
+              src='/logo.svg'
+              style={{ color: '#102758' }}
             />
             <h1 className='text-2xl font-bold text-[#102758]'>LawPoint</h1>
           </div>
-          <nav className='hidden md:flex gap-8 items-center'>
-            <span className='text-[#102758] font-bold border-b-2 border-[#102758] cursor-default'>Home</span>
-          </nav>
         </div>
       </header>
 

@@ -72,8 +72,9 @@ const Navbar = ({ role }) => {
     <aside className='fixed inset-y-0 left-0 w-64 bg-navy flex flex-col shadow-lg z-20'>
       {/* Logo */}
       <div className='px-6 py-5 border-b border-navy-mid'>
-        <Link to='/' className='text-h3 font-bold text-white no-underline'>
-          LawPoint
+        <Link to='/' className='flex items-center gap-3 no-underline'>
+          <img src='/logo.svg' alt='LawPoint' className='w-8 h-8' style={{ filter: 'brightness(0) invert(1)' }} />
+          <span className='text-h3 font-bold text-white'>LawPoint</span>
         </Link>
       </div>
 
