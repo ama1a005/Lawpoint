@@ -11,8 +11,8 @@ const SplashPage = () => {
     <div className='min-h-screen flex flex-col bg-[#f7f9fb] text-[#191c1e]' style={{ fontFamily: "'Public Sans', sans-serif" }}>
       {/* TopAppBar */}
       <header className='w-full sticky top-0 bg-[#f7f9fb] border-b border-[#c5c6d0] z-50'>
-        <div className='flex items-center max-w-7xl mx-auto px-4 md:px-10 w-full h-20'>
-          <div className='flex items-center gap-4'>
+        <div className='flex items-center w-full h-20 px-4'>
+          <div className='flex items-center gap-3'>
             <img
               alt='LawPoint Logo'
               className='h-10 w-10 object-contain text-[#102758]'
